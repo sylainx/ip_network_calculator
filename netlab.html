@@ -1,0 +1,1430 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetLab Simulator - Network Lab Environment</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Orbitron:wght@600;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0e1a;
+            --bg-secondary: #151b2d;
+            --bg-tertiary: #1e2738;
+            --accent-primary: #00ff9f;
+            --accent-secondary: #00d4ff;
+            --accent-danger: #ff3366;
+            --accent-warning: #ffaa00;
+            --text-primary: #e6e8f0;
+            --text-secondary: #9ca3af;
+            --border-color: #2d3748;
+            --glow: 0 0 20px rgba(0, 255, 159, 0.3);
+        }
+
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            overflow: hidden;
+        }
+
+        .title-font {
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        .glow-text {
+            text-shadow: 0 0 10px rgba(0, 255, 159, 0.5);
+        }
+
+        .glow-border {
+            box-shadow: 0 0 15px rgba(0, 255, 159, 0.2);
+        }
+
+        .device-node {
+            cursor: move;
+            transition: all 0.2s ease;
+        }
+
+        .device-node:hover {
+            transform: scale(1.05);
+            filter: brightness(1.2);
+        }
+
+        .connection-line {
+            stroke: var(--accent-secondary);
+            stroke-width: 2;
+            opacity: 0.6;
+            transition: all 0.2s ease;
+        }
+
+        .connection-line:hover {
+            opacity: 1;
+            stroke-width: 3;
+        }
+
+        .cli-output {
+            font-size: 0.875rem;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .cli-input {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--accent-primary);
+            font-family: 'JetBrains Mono', monospace;
+            flex: 1;
+        }
+
+        .scroll-container {
+            scrollbar-width: thin;
+            scrollbar-color: var(--accent-primary) var(--bg-secondary);
+        }
+
+        .scroll-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .scroll-container::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+
+        .scroll-container::-webkit-scrollbar-thumb {
+            background: var(--accent-primary);
+            border-radius: 4px;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
+        .pulse-animation {
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .slide-in {
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .grid-bg {
+            background-image: 
+                linear-gradient(rgba(0, 255, 159, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 159, 0.05) 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
+        }
+
+        .status-active {
+            background: var(--accent-primary);
+            box-shadow: 0 0 8px var(--accent-primary);
+        }
+
+        .status-warning {
+            background: var(--accent-warning);
+            box-shadow: 0 0 8px var(--accent-warning);
+        }
+
+        .status-error {
+            background: var(--accent-danger);
+            box-shadow: 0 0 8px var(--accent-danger);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 255, 159, 0.4);
+        }
+
+        .device-icon {
+            font-size: 1.5rem;
+            margin-bottom: 4px;
+        }
+
+        .interface-badge {
+            font-size: 0.65rem;
+            padding: 2px 6px;
+            border-radius: 3px;
+            background: rgba(0, 255, 159, 0.1);
+            border: 1px solid var(--accent-primary);
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col">
+    
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-gray-900 to-gray-800 border-b-2 border-green-400 px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+            <div class="text-3xl title-font font-black glow-text" style="color: var(--accent-primary);">
+                NETLAB
+            </div>
+            <div class="text-xs text-gray-400 border-l border-gray-600 pl-4">
+                Network Topology & Configuration Simulator
+            </div>
+        </div>
+        <div class="flex items-center space-x-4">
+            <div id="network-status" class="flex items-center space-x-2 text-sm">
+                <span class="status-indicator status-active"></span>
+                <span class="text-gray-300">System Ready</span>
+            </div>
+            <button id="validate-btn" class="btn-primary px-4 py-2 rounded text-sm font-semibold text-gray-900">
+                Validate Network
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="flex-1 flex overflow-hidden">
+        
+        <!-- Left Panel - Devices -->
+        <aside class="w-72 bg-gray-900 border-r border-gray-700 flex flex-col">
+            <div class="p-4 border-b border-gray-700">
+                <h2 class="text-sm font-bold title-font text-green-400 mb-3">EQUIPMENT LIBRARY</h2>
+                <div class="space-y-2">
+                    <button class="add-device-btn w-full text-left px-3 py-2 bg-gray-800 hover:bg-gray-700 rounded border border-gray-700 text-xs transition" data-type="server">
+                        <span class="device-icon">🖥️</span> Server
+                    </button>
+                    <button class="add-device-btn w-full text-left px-3 py-2 bg-gray-800 hover:bg-gray-700 rounded border border-gray-700 text-xs transition" data-type="client">
+                        <span class="device-icon">💻</span> Client
+                    </button>
+                    <button class="add-device-btn w-full text-left px-3 py-2 bg-gray-800 hover:bg-gray-700 rounded border border-gray-700 text-xs transition" data-type="router">
+                        <span class="device-icon">🔀</span> Router
+                    </button>
+                    <button class="add-device-btn w-full text-left px-3 py-2 bg-gray-800 hover:bg-gray-700 rounded border border-gray-700 text-xs transition" data-type="switch">
+                        <span class="device-icon">🔌</span> Switch
+                    </button>
+                    <button class="add-device-btn w-full text-left px-3 py-2 bg-gray-800 hover:bg-gray-700 rounded border border-gray-700 text-xs transition" data-type="firewall">
+                        <span class="device-icon">🛡️</span> Firewall
+                    </button>
+                    <button class="add-device-btn w-full text-left px-3 py-2 bg-gray-800 hover:bg-gray-700 rounded border border-gray-700 text-xs transition" data-type="nas">
+                        <span class="device-icon">💾</span> NAS
+                    </button>
+                </div>
+            </div>
+
+            <div class="p-4 border-b border-gray-700">
+                <h2 class="text-sm font-bold title-font text-blue-400 mb-3">SCENARIOS</h2>
+                <div class="space-y-2">
+                    <button class="scenario-btn w-full text-left px-3 py-2 bg-gray-800 hover:bg-gray-700 rounded border border-gray-700 text-xs transition" data-scenario="simple">
+                        Simple LAN
+                    </button>
+                    <button class="scenario-btn w-full text-left px-3 py-2 bg-gray-800 hover:bg-gray-700 rounded border border-gray-700 text-xs transition" data-scenario="vlan">
+                        VLAN Network
+                    </button>
+                    <button class="scenario-btn w-full text-left px-3 py-2 bg-gray-800 hover:bg-gray-700 rounded border border-gray-700 text-xs transition" data-scenario="routed">
+                        Routed Network
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto scroll-container p-4">
+                <h2 class="text-sm font-bold title-font text-gray-400 mb-3">ACTIVE DEVICES</h2>
+                <div id="device-list" class="space-y-2"></div>
+            </div>
+        </aside>
+
+        <!-- Center Panel - Topology -->
+        <main class="flex-1 flex flex-col bg-gray-950">
+            <div class="p-4 border-b border-gray-800 flex items-center justify-between">
+                <h2 class="text-sm font-bold title-font text-gray-300">NETWORK TOPOLOGY</h2>
+                <div class="flex space-x-2">
+                    <button id="clear-topology" class="px-3 py-1 bg-red-900/30 hover:bg-red-900/50 border border-red-700 rounded text-xs transition">
+                        Clear All
+                    </button>
+                    <button id="test-connectivity" class="px-3 py-1 bg-blue-900/30 hover:bg-blue-900/50 border border-blue-700 rounded text-xs transition">
+                        Test Connectivity
+                    </button>
+                </div>
+            </div>
+            <div id="topology-canvas" class="flex-1 relative grid-bg overflow-hidden">
+                <svg id="connection-svg" class="absolute inset-0 w-full h-full pointer-events-none" style="z-index: 1;">
+                </svg>
+                <div id="devices-container" class="absolute inset-0 w-full h-full" style="z-index: 2;">
+                </div>
+            </div>
+        </main>
+
+        <!-- Right Panel - CLI & Config -->
+        <aside class="w-96 bg-gray-900 border-l border-gray-700 flex flex-col">
+            <div class="p-4 border-b border-gray-700">
+                <h2 class="text-sm font-bold title-font text-green-400 mb-2">COMMAND LINE INTERFACE</h2>
+                <div id="cli-device-name" class="text-xs text-gray-400">No device selected</div>
+            </div>
+
+            <div id="cli-output" class="flex-1 overflow-y-auto scroll-container p-4 bg-black/30 cli-output text-green-400">
+                <div class="text-gray-500 text-xs">
+NetLab Simulator v1.0
+Network Configuration & Topology Lab
+Ready for commands...
+
+Type 'help' for available commands.
+                </div>
+            </div>
+
+            <div class="p-4 border-t border-gray-700 bg-gray-950">
+                <div class="flex items-center space-x-2 bg-black/50 border border-gray-700 rounded px-3 py-2">
+                    <span class="text-green-400 text-sm">$</span>
+                    <input 
+                        type="text" 
+                        id="cli-input" 
+                        class="cli-input text-sm"
+                        placeholder="Enter command..."
+                        autocomplete="off"
+                    />
+                </div>
+            </div>
+
+            <div class="p-4 border-t border-gray-700">
+                <h3 class="text-xs font-bold text-gray-400 mb-2">VALIDATION RESULTS</h3>
+                <div id="validation-output" class="text-xs space-y-1 max-h-32 overflow-y-auto scroll-container">
+                    <div class="text-gray-500">No validation performed yet</div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <script>
+        // =============================================
+        // CORE DATA STRUCTURES
+        // =============================================
+
+        class NetworkInterface {
+            constructor(name, ipAddress = '', netmask = '', vlan = null) {
+                this.name = name;
+                this.ipAddress = ipAddress;
+                this.netmask = netmask;
+                this.vlan = vlan;
+                this.connectedTo = null; // {deviceId, interfaceName}
+            }
+
+            getNetwork() {
+                if (!this.ipAddress || !this.netmask) return null;
+                const ip = this.ipAddress.split('.').map(Number);
+                const mask = this.netmask.split('.').map(Number);
+                return ip.map((octet, i) => octet & mask[i]).join('.');
+            }
+
+            isInSameNetwork(otherInterface) {
+                const thisNet = this.getNetwork();
+                const otherNet = otherInterface.getNetwork();
+                return thisNet && otherNet && thisNet === otherNet && this.netmask === otherInterface.netmask;
+            }
+        }
+
+        class Device {
+            constructor(id, type, name) {
+                this.id = id;
+                this.type = type;
+                this.name = name;
+                this.interfaces = [];
+                this.gateway = '';
+                this.routes = []; // {destination, gateway, interface}
+                this.vlans = [];
+                this.services = [];
+                this.firewallRules = []; // {action: 'allow'|'deny', source, destination, port}
+                this.x = 100;
+                this.y = 100;
+                
+                this.initializeInterfaces();
+            }
+
+            initializeInterfaces() {
+                switch(this.type) {
+                    case 'server':
+                    case 'client':
+                    case 'nas':
+                        this.interfaces.push(new NetworkInterface('eth0'));
+                        break;
+                    case 'router':
+                        this.interfaces.push(new NetworkInterface('eth0'));
+                        this.interfaces.push(new NetworkInterface('eth1'));
+                        this.interfaces.push(new NetworkInterface('eth2'));
+                        break;
+                    case 'switch':
+                        for(let i = 0; i < 8; i++) {
+                            this.interfaces.push(new NetworkInterface(`port${i}`));
+                        }
+                        break;
+                    case 'firewall':
+                        this.interfaces.push(new NetworkInterface('wan0'));
+                        this.interfaces.push(new NetworkInterface('lan0'));
+                        break;
+                }
+            }
+
+            getInterface(name) {
+                return this.interfaces.find(iface => iface.name === name);
+            }
+
+            addRoute(destination, gateway, interfaceName) {
+                this.routes.push({destination, gateway, interface: interfaceName});
+            }
+
+            addFirewallRule(action, source, destination, port) {
+                this.firewallRules.push({action, source, destination, port});
+            }
+        }
+
+        class NetworkSimulator {
+            constructor() {
+                this.devices = new Map();
+                this.deviceCounter = 0;
+                this.selectedDevice = null;
+                this.commandHistory = [];
+                this.historyIndex = -1;
+            }
+
+            addDevice(type) {
+                const id = `dev_${this.deviceCounter++}`;
+                const name = `${type}_${this.deviceCounter}`;
+                const device = new Device(id, type, name);
+                
+                // Position aléatoire
+                device.x = 150 + Math.random() * 600;
+                device.y = 100 + Math.random() * 400;
+                
+                this.devices.set(id, device);
+                return device;
+            }
+
+            removeDevice(id) {
+                // Déconnecter toutes les interfaces
+                const device = this.devices.get(id);
+                if (device) {
+                    device.interfaces.forEach(iface => {
+                        if (iface.connectedTo) {
+                            const otherDevice = this.devices.get(iface.connectedTo.deviceId);
+                            if (otherDevice) {
+                                const otherIface = otherDevice.getInterface(iface.connectedTo.interfaceName);
+                                if (otherIface) otherIface.connectedTo = null;
+                            }
+                        }
+                    });
+                }
+                this.devices.delete(id);
+                if (this.selectedDevice?.id === id) {
+                    this.selectedDevice = null;
+                }
+            }
+
+            connectInterfaces(deviceId1, ifaceName1, deviceId2, ifaceName2) {
+                const dev1 = this.devices.get(deviceId1);
+                const dev2 = this.devices.get(deviceId2);
+                
+                if (!dev1 || !dev2) return false;
+                
+                const iface1 = dev1.getInterface(ifaceName1);
+                const iface2 = dev2.getInterface(ifaceName2);
+                
+                if (!iface1 || !iface2) return false;
+                
+                iface1.connectedTo = {deviceId: deviceId2, interfaceName: ifaceName2};
+                iface2.connectedTo = {deviceId: deviceId1, interfaceName: ifaceName1};
+                
+                return true;
+            }
+
+            validateNetwork() {
+                const errors = [];
+                const warnings = [];
+                const ipMap = new Map();
+
+                // Vérifier les conflits d'IP et cohérence
+                this.devices.forEach(device => {
+                    device.interfaces.forEach(iface => {
+                        if (iface.ipAddress) {
+                            // Conflit d'IP
+                            if (ipMap.has(iface.ipAddress)) {
+                                errors.push(`IP conflict: ${iface.ipAddress} used by ${device.name}:${iface.name} and ${ipMap.get(iface.ipAddress)}`);
+                            } else {
+                                ipMap.set(iface.ipAddress, `${device.name}:${iface.name}`);
+                            }
+
+                            // Vérifier que la passerelle est dans le même réseau
+                            if (device.gateway) {
+                                const network = iface.getNetwork();
+                                const gwOctets = device.gateway.split('.').map(Number);
+                                const maskOctets = iface.netmask.split('.').map(Number);
+                                const gwNetwork = gwOctets.map((octet, i) => octet & maskOctets[i]).join('.');
+                                
+                                if (network !== gwNetwork) {
+                                    errors.push(`${device.name}: Gateway ${device.gateway} not in network ${network}`);
+                                }
+                            }
+                        }
+
+                        // Interface connectée mais sans IP
+                        if (iface.connectedTo && !iface.ipAddress && device.type !== 'switch') {
+                            warnings.push(`${device.name}:${iface.name} connected but no IP configured`);
+                        }
+                    });
+
+                    // Vérifier les routes
+                    device.routes.forEach(route => {
+                        const iface = device.getInterface(route.interface);
+                        if (!iface) {
+                            errors.push(`${device.name}: Route uses non-existent interface ${route.interface}`);
+                        }
+                    });
+                });
+
+                return {errors, warnings, valid: errors.length === 0};
+            }
+
+            testConnectivity(sourceId, destId) {
+                const source = this.devices.get(sourceId);
+                const dest = this.devices.get(destId);
+
+                if (!source || !dest) return {success: false, reason: 'Device not found'};
+
+                const path = [];
+                const visited = new Set();
+
+                const findPath = (currentId, targetId, currentPath) => {
+                    if (currentId === targetId) {
+                        return [...currentPath, currentId];
+                    }
+
+                    if (visited.has(currentId)) return null;
+                    visited.add(currentId);
+
+                    const device = this.devices.get(currentId);
+                    
+                    for (const iface of device.interfaces) {
+                        if (iface.connectedTo) {
+                            const nextId = iface.connectedTo.deviceId;
+                            const result = findPath(nextId, targetId, [...currentPath, currentId]);
+                            if (result) return result;
+                        }
+                    }
+
+                    return null;
+                };
+
+                const foundPath = findPath(sourceId, destId, []);
+                
+                if (!foundPath) {
+                    return {success: false, reason: 'No physical connection', path: []};
+                }
+
+                // Vérifier la cohérence IP
+                const sourceIface = source.interfaces.find(i => i.ipAddress);
+                const destIface = dest.interfaces.find(i => i.ipAddress);
+
+                if (!sourceIface?.ipAddress || !destIface?.ipAddress) {
+                    return {success: false, reason: 'Missing IP configuration', path: foundPath};
+                }
+
+                // Vérifier si dans le même réseau ou si routage configuré
+                if (sourceIface.isInSameNetwork(destIface)) {
+                    return {success: true, reason: 'Same network, direct connection', path: foundPath};
+                }
+
+                // Vérifier gateway
+                if (!source.gateway) {
+                    return {success: false, reason: 'Different networks, no gateway configured', path: foundPath};
+                }
+
+                return {success: true, reason: 'Routed connection via gateway', path: foundPath};
+            }
+
+            loadScenario(scenarioName) {
+                // Nettoyer
+                this.devices.clear();
+                this.deviceCounter = 0;
+                this.selectedDevice = null;
+
+                switch(scenarioName) {
+                    case 'simple':
+                        this.loadSimpleLAN();
+                        break;
+                    case 'vlan':
+                        this.loadVLANNetwork();
+                        break;
+                    case 'routed':
+                        this.loadRoutedNetwork();
+                        break;
+                }
+            }
+
+            loadSimpleLAN() {
+                const sw = this.addDevice('switch');
+                sw.name = 'switch_main';
+                sw.x = 400;
+                sw.y = 200;
+
+                const server = this.addDevice('server');
+                server.name = 'srv_web';
+                server.x = 250;
+                server.y = 100;
+                server.interfaces[0].ipAddress = '192.168.1.10';
+                server.interfaces[0].netmask = '255.255.255.0';
+                server.gateway = '192.168.1.1';
+
+                const client1 = this.addDevice('client');
+                client1.name = 'pc_001';
+                client1.x = 550;
+                client1.y = 100;
+                client1.interfaces[0].ipAddress = '192.168.1.100';
+                client1.interfaces[0].netmask = '255.255.255.0';
+                client1.gateway = '192.168.1.1';
+
+                const client2 = this.addDevice('client');
+                client2.name = 'pc_002';
+                client2.x = 400;
+                client2.y = 350;
+                client2.interfaces[0].ipAddress = '192.168.1.101';
+                client2.interfaces[0].netmask = '255.255.255.0';
+                client2.gateway = '192.168.1.1';
+
+                this.connectInterfaces(server.id, 'eth0', sw.id, 'port0');
+                this.connectInterfaces(client1.id, 'eth0', sw.id, 'port1');
+                this.connectInterfaces(client2.id, 'eth0', sw.id, 'port2');
+            }
+
+            loadVLANNetwork() {
+                const sw = this.addDevice('switch');
+                sw.name = 'switch_vlan';
+                sw.x = 400;
+                sw.y = 250;
+                sw.vlans = [10, 20];
+
+                const srv1 = this.addDevice('server');
+                srv1.name = 'srv_vlan10';
+                srv1.x = 200;
+                srv1.y = 150;
+                srv1.interfaces[0].ipAddress = '10.0.10.10';
+                srv1.interfaces[0].netmask = '255.255.255.0';
+                srv1.interfaces[0].vlan = 10;
+
+                const srv2 = this.addDevice('server');
+                srv2.name = 'srv_vlan20';
+                srv2.x = 600;
+                srv2.y = 150;
+                srv2.interfaces[0].ipAddress = '10.0.20.10';
+                srv2.interfaces[0].netmask = '255.255.255.0';
+                srv2.interfaces[0].vlan = 20;
+
+                const client = this.addDevice('client');
+                client.name = 'pc_vlan10';
+                client.x = 200;
+                client.y = 350;
+                client.interfaces[0].ipAddress = '10.0.10.100';
+                client.interfaces[0].netmask = '255.255.255.0';
+                client.interfaces[0].vlan = 10;
+
+                this.connectInterfaces(srv1.id, 'eth0', sw.id, 'port0');
+                this.connectInterfaces(srv2.id, 'eth0', sw.id, 'port1');
+                this.connectInterfaces(client.id, 'eth0', sw.id, 'port2');
+            }
+
+            loadRoutedNetwork() {
+                const router = this.addDevice('router');
+                router.name = 'router_main';
+                router.x = 400;
+                router.y = 250;
+                router.interfaces[0].ipAddress = '192.168.1.1';
+                router.interfaces[0].netmask = '255.255.255.0';
+                router.interfaces[1].ipAddress = '10.0.0.1';
+                router.interfaces[1].netmask = '255.255.255.0';
+
+                const sw1 = this.addDevice('switch');
+                sw1.name = 'switch_lan1';
+                sw1.x = 200;
+                sw1.y = 150;
+
+                const sw2 = this.addDevice('switch');
+                sw2.name = 'switch_lan2';
+                sw2.x = 600;
+                sw2.y = 150;
+
+                const client1 = this.addDevice('client');
+                client1.name = 'pc_lan1';
+                client1.x = 100;
+                client1.y = 100;
+                client1.interfaces[0].ipAddress = '192.168.1.100';
+                client1.interfaces[0].netmask = '255.255.255.0';
+                client1.gateway = '192.168.1.1';
+
+                const client2 = this.addDevice('client');
+                client2.name = 'pc_lan2';
+                client2.x = 700;
+                client2.y = 100;
+                client2.interfaces[0].ipAddress = '10.0.0.100';
+                client2.interfaces[0].netmask = '255.255.255.0';
+                client2.gateway = '10.0.0.1';
+
+                this.connectInterfaces(router.id, 'eth0', sw1.id, 'port0');
+                this.connectInterfaces(router.id, 'eth1', sw2.id, 'port0');
+                this.connectInterfaces(client1.id, 'eth0', sw1.id, 'port1');
+                this.connectInterfaces(client2.id, 'eth0', sw2.id, 'port1');
+            }
+        }
+
+        // =============================================
+        // CLI COMMAND PARSER
+        // =============================================
+
+        class CommandParser {
+            constructor(simulator) {
+                this.simulator = simulator;
+            }
+
+            parse(command, device) {
+                const parts = command.trim().split(/\s+/);
+                const cmd = parts[0]?.toLowerCase();
+
+                if (!device && cmd !== 'help') {
+                    return 'Error: No device selected. Click on a device first.';
+                }
+
+                switch(cmd) {
+                    case 'help':
+                        return this.helpCommand();
+                    case 'show':
+                        return this.showCommand(parts, device);
+                    case 'ip':
+                        return this.ipCommand(parts, device);
+                    case 'route':
+                        return this.routeCommand(parts, device);
+                    case 'vlan':
+                        return this.vlanCommand(parts, device);
+                    case 'firewall':
+                        return this.firewallCommand(parts, device);
+                    case 'connect':
+                        return this.connectCommand(parts, device);
+                    case 'service':
+                        return this.serviceCommand(parts, device);
+                    case 'ping':
+                        return this.pingCommand(parts, device);
+                    default:
+                        return `Unknown command: ${cmd}. Type 'help' for available commands.`;
+                }
+            }
+
+            helpCommand() {
+                return `Available commands:
+  show config              - Display device configuration
+  show interfaces          - List all interfaces
+  show routes              - Display routing table
+  show vlans               - Display VLAN configuration
+  show firewall            - Display firewall rules
+  
+  ip addr add <iface> <ip> <netmask> - Configure IP address
+  ip gateway set <ip>      - Set default gateway
+  
+  route add <dest> <gateway> <iface> - Add static route
+  
+  vlan add <id>            - Add VLAN
+  vlan set <iface> <id>    - Assign interface to VLAN
+  
+  firewall add <allow|deny> <src> <dst> <port> - Add firewall rule
+  
+  connect <local_iface> <remote_device> <remote_iface> - Connect interfaces
+  
+  service add <name>       - Add service (SSH, HTTP, etc.)
+  
+  ping <destination_device> - Test connectivity
+  
+  help                     - Show this help`;
+            }
+
+            showCommand(parts, device) {
+                const subCmd = parts[1]?.toLowerCase();
+                
+                switch(subCmd) {
+                    case 'config':
+                        return this.showConfig(device);
+                    case 'interfaces':
+                        return this.showInterfaces(device);
+                    case 'routes':
+                        return this.showRoutes(device);
+                    case 'vlans':
+                        return this.showVlans(device);
+                    case 'firewall':
+                        return this.showFirewall(device);
+                    default:
+                        return 'Usage: show <config|interfaces|routes|vlans|firewall>';
+                }
+            }
+
+            showConfig(device) {
+                let output = `Configuration for ${device.name} (${device.type})\n`;
+                output += `${'='.repeat(50)}\n\n`;
+                
+                output += `Interfaces:\n`;
+                device.interfaces.forEach(iface => {
+                    output += `  ${iface.name}: ${iface.ipAddress || 'not configured'}`;
+                    if (iface.netmask) output += `/${iface.netmask}`;
+                    if (iface.vlan) output += ` [VLAN ${iface.vlan}]`;
+                    if (iface.connectedTo) {
+                        const peer = this.simulator.devices.get(iface.connectedTo.deviceId);
+                        output += ` -> ${peer.name}:${iface.connectedTo.interfaceName}`;
+                    }
+                    output += '\n';
+                });
+                
+                if (device.gateway) {
+                    output += `\nDefault Gateway: ${device.gateway}\n`;
+                }
+                
+                if (device.routes.length > 0) {
+                    output += `\nStatic Routes:\n`;
+                    device.routes.forEach(route => {
+                        output += `  ${route.destination} via ${route.gateway} dev ${route.interface}\n`;
+                    });
+                }
+                
+                if (device.services.length > 0) {
+                    output += `\nServices: ${device.services.join(', ')}\n`;
+                }
+                
+                return output;
+            }
+
+            showInterfaces(device) {
+                let output = `Interface\tIP Address\tNetmask\t\tVLAN\tStatus\n`;
+                output += `${'='.repeat(70)}\n`;
+                
+                device.interfaces.forEach(iface => {
+                    const status = iface.connectedTo ? 'UP' : 'DOWN';
+                    output += `${iface.name}\t\t`;
+                    output += `${iface.ipAddress || 'N/A'}\t`;
+                    output += `${iface.netmask || 'N/A'}\t`;
+                    output += `${iface.vlan || '-'}\t`;
+                    output += `${status}\n`;
+                });
+                
+                return output;
+            }
+
+            showRoutes(device) {
+                if (device.routes.length === 0) {
+                    return 'No static routes configured.';
+                }
+                
+                let output = `Destination\tGateway\t\tInterface\n`;
+                output += `${'='.repeat(50)}\n`;
+                
+                device.routes.forEach(route => {
+                    output += `${route.destination}\t${route.gateway}\t${route.interface}\n`;
+                });
+                
+                return output;
+            }
+
+            showVlans(device) {
+                if (device.vlans.length === 0) {
+                    return 'No VLANs configured.';
+                }
+                
+                let output = `Configured VLANs: ${device.vlans.join(', ')}\n\n`;
+                
+                device.interfaces.forEach(iface => {
+                    if (iface.vlan) {
+                        output += `${iface.name}: VLAN ${iface.vlan}\n`;
+                    }
+                });
+                
+                return output;
+            }
+
+            showFirewall(device) {
+                if (device.firewallRules.length === 0) {
+                    return 'No firewall rules configured.';
+                }
+                
+                let output = `Firewall Rules:\n`;
+                output += `${'='.repeat(60)}\n`;
+                
+                device.firewallRules.forEach((rule, idx) => {
+                    output += `${idx + 1}. ${rule.action.toUpperCase()} `;
+                    output += `${rule.source} -> ${rule.destination}`;
+                    if (rule.port) output += `:${rule.port}`;
+                    output += '\n';
+                });
+                
+                return output;
+            }
+
+            ipCommand(parts, device) {
+                const subCmd = parts[1]?.toLowerCase();
+                
+                if (subCmd === 'addr' && parts[2] === 'add') {
+                    const iface = parts[3];
+                    const ip = parts[4];
+                    const netmask = parts[5];
+                    
+                    if (!iface || !ip || !netmask) {
+                        return 'Usage: ip addr add <interface> <ip> <netmask>';
+                    }
+                    
+                    const ifaceObj = device.getInterface(iface);
+                    if (!ifaceObj) {
+                        return `Error: Interface ${iface} not found.`;
+                    }
+                    
+                    ifaceObj.ipAddress = ip;
+                    ifaceObj.netmask = netmask;
+                    
+                    return `IP address ${ip}/${netmask} configured on ${iface}`;
+                }
+                
+                if (subCmd === 'gateway' && parts[2] === 'set') {
+                    const gw = parts[3];
+                    if (!gw) {
+                        return 'Usage: ip gateway set <gateway_ip>';
+                    }
+                    device.gateway = gw;
+                    return `Default gateway set to ${gw}`;
+                }
+                
+                return 'Usage: ip <addr|gateway> ...';
+            }
+
+            routeCommand(parts, device) {
+                if (parts[1] === 'add') {
+                    const dest = parts[2];
+                    const gw = parts[3];
+                    const iface = parts[4];
+                    
+                    if (!dest || !gw || !iface) {
+                        return 'Usage: route add <destination> <gateway> <interface>';
+                    }
+                    
+                    device.addRoute(dest, gw, iface);
+                    return `Route added: ${dest} via ${gw} dev ${iface}`;
+                }
+                
+                return 'Usage: route add <destination> <gateway> <interface>';
+            }
+
+            vlanCommand(parts, device) {
+                const subCmd = parts[1]?.toLowerCase();
+                
+                if (subCmd === 'add') {
+                    const vlanId = parseInt(parts[2]);
+                    if (!vlanId) {
+                        return 'Usage: vlan add <vlan_id>';
+                    }
+                    
+                    if (!device.vlans.includes(vlanId)) {
+                        device.vlans.push(vlanId);
+                    }
+                    return `VLAN ${vlanId} added`;
+                }
+                
+                if (subCmd === 'set') {
+                    const iface = parts[2];
+                    const vlanId = parseInt(parts[3]);
+                    
+                    if (!iface || !vlanId) {
+                        return 'Usage: vlan set <interface> <vlan_id>';
+                    }
+                    
+                    const ifaceObj = device.getInterface(iface);
+                    if (!ifaceObj) {
+                        return `Error: Interface ${iface} not found.`;
+                    }
+                    
+                    ifaceObj.vlan = vlanId;
+                    return `Interface ${iface} assigned to VLAN ${vlanId}`;
+                }
+                
+                return 'Usage: vlan <add|set> ...';
+            }
+
+            firewallCommand(parts, device) {
+                if (parts[1] === 'add') {
+                    const action = parts[2];
+                    const src = parts[3];
+                    const dst = parts[4];
+                    const port = parts[5];
+                    
+                    if (!action || !src || !dst) {
+                        return 'Usage: firewall add <allow|deny> <source> <destination> [port]';
+                    }
+                    
+                    device.addFirewallRule(action, src, dst, port);
+                    return `Firewall rule added: ${action} ${src} -> ${dst}${port ? ':' + port : ''}`;
+                }
+                
+                return 'Usage: firewall add <allow|deny> <source> <destination> [port]';
+            }
+
+            connectCommand(parts, device) {
+                const localIface = parts[1];
+                const remoteName = parts[2];
+                const remoteIface = parts[3];
+                
+                if (!localIface || !remoteName || !remoteIface) {
+                    return 'Usage: connect <local_interface> <remote_device> <remote_interface>';
+                }
+                
+                // Trouver le device distant
+                let remoteDevice = null;
+                for (const [id, dev] of this.simulator.devices) {
+                    if (dev.name === remoteName) {
+                        remoteDevice = dev;
+                        break;
+                    }
+                }
+                
+                if (!remoteDevice) {
+                    return `Error: Device ${remoteName} not found.`;
+                }
+                
+                const success = this.simulator.connectInterfaces(
+                    device.id, localIface,
+                    remoteDevice.id, remoteIface
+                );
+                
+                if (success) {
+                    return `Connected ${device.name}:${localIface} <-> ${remoteName}:${remoteIface}`;
+                } else {
+                    return 'Error: Failed to connect interfaces.';
+                }
+            }
+
+            serviceCommand(parts, device) {
+                if (parts[1] === 'add') {
+                    const service = parts[2];
+                    if (!service) {
+                        return 'Usage: service add <service_name>';
+                    }
+                    
+                    if (!device.services.includes(service)) {
+                        device.services.push(service);
+                    }
+                    return `Service ${service} added`;
+                }
+                
+                return 'Usage: service add <service_name>';
+            }
+
+            pingCommand(parts, device) {
+                const destName = parts[1];
+                if (!destName) {
+                    return 'Usage: ping <destination_device>';
+                }
+                
+                // Trouver le device destination
+                let destDevice = null;
+                for (const [id, dev] of this.simulator.devices) {
+                    if (dev.name === destName) {
+                        destDevice = dev;
+                        break;
+                    }
+                }
+                
+                if (!destDevice) {
+                    return `Error: Device ${destName} not found.`;
+                }
+                
+                const result = this.simulator.testConnectivity(device.id, destDevice.id);
+                
+                let output = `PING ${destName}:\n`;
+                output += `Result: ${result.success ? 'SUCCESS' : 'FAILED'}\n`;
+                output += `Reason: ${result.reason}\n`;
+                
+                if (result.path.length > 0) {
+                    output += `Path: `;
+                    result.path.forEach((id, idx) => {
+                        const dev = this.simulator.devices.get(id);
+                        output += dev.name;
+                        if (idx < result.path.length - 1) output += ' -> ';
+                    });
+                }
+                
+                return output;
+            }
+        }
+
+        // =============================================
+        // UI MANAGEMENT
+        // =============================================
+
+        class NetworkUI {
+            constructor(simulator, commandParser) {
+                this.simulator = simulator;
+                this.commandParser = commandParser;
+                this.draggedDevice = null;
+                this.dragOffset = {x: 0, y: 0};
+                
+                this.initEventListeners();
+                this.render();
+            }
+
+            initEventListeners() {
+                // Ajout de devices
+                document.querySelectorAll('.add-device-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const type = btn.dataset.type;
+                        this.simulator.addDevice(type);
+                        this.render();
+                        this.addLog(`Device ${type} added to topology`);
+                    });
+                });
+
+                // Scénarios
+                document.querySelectorAll('.scenario-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const scenario = btn.dataset.scenario;
+                        this.simulator.loadScenario(scenario);
+                        this.render();
+                        this.addLog(`Scenario loaded: ${scenario}`);
+                    });
+                });
+
+                // Validation
+                document.getElementById('validate-btn').addEventListener('click', () => {
+                    this.validateNetwork();
+                });
+
+                // Clear
+                document.getElementById('clear-topology').addEventListener('click', () => {
+                    if (confirm('Clear all devices?')) {
+                        this.simulator.devices.clear();
+                        this.simulator.selectedDevice = null;
+                        this.render();
+                        this.addLog('Topology cleared');
+                    }
+                });
+
+                // Test connectivity
+                document.getElementById('test-connectivity').addEventListener('click', () => {
+                    this.showConnectivityTest();
+                });
+
+                // CLI Input
+                const cliInput = document.getElementById('cli-input');
+                cliInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        const cmd = cliInput.value.trim();
+                        if (cmd) {
+                            this.executeCommand(cmd);
+                            cliInput.value = '';
+                        }
+                    }
+                });
+            }
+
+            render() {
+                this.renderDeviceList();
+                this.renderTopology();
+                this.updateCLIHeader();
+            }
+
+            renderDeviceList() {
+                const list = document.getElementById('device-list');
+                list.innerHTML = '';
+
+                this.simulator.devices.forEach(device => {
+                    const div = document.createElement('div');
+                    div.className = 'p-2 bg-gray-800 rounded border border-gray-700 hover:border-green-400 cursor-pointer transition text-xs slide-in';
+                    
+                    const isSelected = this.simulator.selectedDevice?.id === device.id;
+                    if (isSelected) {
+                        div.classList.add('border-green-400', 'bg-gray-700');
+                    }
+                    
+                    div.innerHTML = `
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="font-semibold text-green-400">${device.name}</div>
+                                <div class="text-gray-400">${device.type}</div>
+                            </div>
+                            <button class="delete-device text-red-400 hover:text-red-300 text-lg" data-id="${device.id}">×</button>
+                        </div>
+                    `;
+                    
+                    div.addEventListener('click', (e) => {
+                        if (!e.target.classList.contains('delete-device')) {
+                            this.selectDevice(device.id);
+                        }
+                    });
+                    
+                    div.querySelector('.delete-device').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.simulator.removeDevice(device.id);
+                        this.render();
+                    });
+                    
+                    list.appendChild(div);
+                });
+            }
+
+            renderTopology() {
+                const container = document.getElementById('devices-container');
+                const svg = document.getElementById('connection-svg');
+                container.innerHTML = '';
+                svg.innerHTML = '';
+
+                // Dessiner les connexions
+                this.simulator.devices.forEach(device => {
+                    device.interfaces.forEach(iface => {
+                        if (iface.connectedTo) {
+                            const otherDevice = this.simulator.devices.get(iface.connectedTo.deviceId);
+                            if (otherDevice) {
+                                // Éviter les doublons
+                                if (device.id < otherDevice.id) {
+                                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                                    line.setAttribute('x1', device.x + 50);
+                                    line.setAttribute('y1', device.y + 50);
+                                    line.setAttribute('x2', otherDevice.x + 50);
+                                    line.setAttribute('y2', otherDevice.y + 50);
+                                    line.classList.add('connection-line');
+                                    
+                                    const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+                                    title.textContent = `${device.name}:${iface.name} <-> ${otherDevice.name}:${iface.connectedTo.interfaceName}`;
+                                    line.appendChild(title);
+                                    
+                                    svg.appendChild(line);
+                                }
+                            }
+                        }
+                    });
+                });
+
+                // Dessiner les devices
+                this.simulator.devices.forEach(device => {
+                    const div = this.createDeviceNode(device);
+                    container.appendChild(div);
+                });
+            }
+
+            createDeviceNode(device) {
+                const div = document.createElement('div');
+                div.className = 'device-node absolute bg-gray-800 border-2 rounded-lg p-3 shadow-lg';
+                div.style.left = device.x + 'px';
+                div.style.top = device.y + 'px';
+                div.style.width = '100px';
+                
+                const isSelected = this.simulator.selectedDevice?.id === device.id;
+                div.style.borderColor = isSelected ? 'var(--accent-primary)' : 'var(--border-color)';
+                if (isSelected) {
+                    div.classList.add('glow-border');
+                }
+
+                const icon = this.getDeviceIcon(device.type);
+                
+                // Vérifier si configuré
+                const hasIP = device.interfaces.some(i => i.ipAddress);
+                const statusClass = hasIP ? 'status-active' : 'status-warning';
+                
+                div.innerHTML = `
+                    <div class="text-center">
+                        <div class="text-3xl mb-1">${icon}</div>
+                        <div class="text-xs font-semibold truncate">${device.name}</div>
+                        <div class="mt-1">
+                            <span class="status-indicator ${statusClass}"></span>
+                        </div>
+                    </div>
+                `;
+
+                // Drag & drop
+                div.addEventListener('mousedown', (e) => {
+                    this.draggedDevice = device;
+                    this.dragOffset.x = e.clientX - device.x;
+                    this.dragOffset.y = e.clientY - device.y;
+                    
+                    this.selectDevice(device.id);
+                });
+
+                // Click pour sélectionner
+                div.addEventListener('click', () => {
+                    this.selectDevice(device.id);
+                });
+
+                return div;
+            }
+
+            getDeviceIcon(type) {
+                const icons = {
+                    server: '🖥️',
+                    client: '💻',
+                    router: '🔀',
+                    switch: '🔌',
+                    firewall: '🛡️',
+                    nas: '💾'
+                };
+                return icons[type] || '📦';
+            }
+
+            selectDevice(deviceId) {
+                const device = this.simulator.devices.get(deviceId);
+                this.simulator.selectedDevice = device;
+                this.render();
+                this.addLog(`Device selected: ${device.name}`);
+            }
+
+            updateCLIHeader() {
+                const header = document.getElementById('cli-device-name');
+                if (this.simulator.selectedDevice) {
+                    header.textContent = `${this.simulator.selectedDevice.name} (${this.simulator.selectedDevice.type})`;
+                    header.className = 'text-xs text-green-400';
+                } else {
+                    header.textContent = 'No device selected';
+                    header.className = 'text-xs text-gray-400';
+                }
+            }
+
+            executeCommand(cmd) {
+                const output = document.getElementById('cli-output');
+                
+                // Afficher la commande
+                const cmdLine = document.createElement('div');
+                cmdLine.className = 'text-blue-400';
+                cmdLine.textContent = `$ ${cmd}`;
+                output.appendChild(cmdLine);
+                
+                // Exécuter
+                const result = this.commandParser.parse(cmd, this.simulator.selectedDevice);
+                
+                // Afficher le résultat
+                const resultDiv = document.createElement('div');
+                resultDiv.className = 'text-gray-300 mb-3';
+                resultDiv.textContent = result;
+                output.appendChild(resultDiv);
+                
+                // Scroll vers le bas
+                output.scrollTop = output.scrollHeight;
+                
+                // Re-render si nécessaire
+                this.render();
+            }
+
+            addLog(message) {
+                const output = document.getElementById('cli-output');
+                const logDiv = document.createElement('div');
+                logDiv.className = 'text-gray-500 text-xs';
+                logDiv.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+                output.appendChild(logDiv);
+                output.scrollTop = output.scrollHeight;
+            }
+
+            validateNetwork() {
+                const result = this.simulator.validateNetwork();
+                const validationOutput = document.getElementById('validation-output');
+                validationOutput.innerHTML = '';
+
+                if (result.valid) {
+                    validationOutput.innerHTML = '<div class="text-green-400">✓ Network configuration is valid</div>';
+                } else {
+                    result.errors.forEach(error => {
+                        const div = document.createElement('div');
+                        div.className = 'text-red-400 flex items-start';
+                        div.innerHTML = `<span class="status-indicator status-error mr-1 mt-1"></span><span>${error}</span>`;
+                        validationOutput.appendChild(div);
+                    });
+                }
+
+                result.warnings.forEach(warning => {
+                    const div = document.createElement('div');
+                    div.className = 'text-yellow-400 flex items-start';
+                    div.innerHTML = `<span class="status-indicator status-warning mr-1 mt-1"></span><span>${warning}</span>`;
+                    validationOutput.appendChild(div);
+                });
+
+                this.addLog(`Validation performed: ${result.errors.length} errors, ${result.warnings.length} warnings`);
+            }
+
+            showConnectivityTest() {
+                const devices = Array.from(this.simulator.devices.values());
+                if (devices.length < 2) {
+                    alert('Add at least 2 devices to test connectivity');
+                    return;
+                }
+
+                const source = prompt(`Enter source device name (available: ${devices.map(d => d.name).join(', ')})`);
+                const dest = prompt(`Enter destination device name`);
+
+                if (!source || !dest) return;
+
+                const srcDevice = devices.find(d => d.name === source);
+                const dstDevice = devices.find(d => d.name === dest);
+
+                if (!srcDevice || !dstDevice) {
+                    alert('Device not found');
+                    return;
+                }
+
+                const result = this.simulator.testConnectivity(srcDevice.id, dstDevice.id);
+                
+                let message = `Connectivity Test: ${source} → ${dest}\n\n`;
+                message += `Result: ${result.success ? 'SUCCESS ✓' : 'FAILED ✗'}\n`;
+                message += `Reason: ${result.reason}\n`;
+                
+                if (result.path.length > 0) {
+                    message += `\nPath:\n`;
+                    result.path.forEach((id, idx) => {
+                        const dev = this.simulator.devices.get(id);
+                        message += `  ${idx + 1}. ${dev.name}`;
+                        if (idx < result.path.length - 1) message += ' →\n';
+                    });
+                }
+
+                alert(message);
+                this.addLog(`Connectivity test: ${source} → ${dest} = ${result.success ? 'SUCCESS' : 'FAILED'}`);
+            }
+        }
+
+        // =============================================
+        // INITIALIZATION
+        // =============================================
+
+        const simulator = new NetworkSimulator();
+        const commandParser = new CommandParser(simulator);
+        const ui = new NetworkUI(simulator, commandParser);
+
+        // Charger un scénario par défaut
+        simulator.loadScenario('simple');
+        ui.render();
+
+        // Gestion du drag & drop
+        document.addEventListener('mousemove', (e) => {
+            if (ui.draggedDevice) {
+                ui.draggedDevice.x = e.clientX - ui.dragOffset.x;
+                ui.draggedDevice.y = e.clientY - ui.dragOffset.y;
+                ui.renderTopology();
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            ui.draggedDevice = null;
+        });
+    </script>
+</body>
+</html>
