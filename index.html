@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IPv4 Network Calculator - Professional Tool</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        dark: {
+                            bg: '#0f172a',
+                            card: '#1e293b',
+                            border: '#334155',
+                            hover: '#475569'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Styles personnalisés pour le mode professionnel */
+        .mono { font-family: 'Courier New', monospace; }
+        .result-section { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-dark-bg text-gray-100 min-h-screen">
+    
+    <!-- Header -->
+    <header class="bg-dark-card border-b border-dark-border">
+        <div class="max-w-7xl mx-auto px-4 py-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold text-blue-400">IPv4 Network Calculator</h1>
+                    <p class="text-gray-400 mt-1">Professional network analysis and subnetting tool</p>
+                </div>
+                <div class="flex items-center gap-4">
+                    <span class="px-3 py-1 bg-green-900/30 text-green-400 rounded-md text-sm border border-green-700">v1.0</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 py-8">
+        
+        <!-- Tabs Navigation -->
+        <div class="bg-dark-card rounded-lg border border-dark-border mb-6">
+            <div class="flex border-b border-dark-border overflow-x-auto">
+                <button onclick="switchTab('analyze')" id="tab-analyze" class="tab-btn px-6 py-4 font-semibold text-blue-400 border-b-2 border-blue-400">
+                    Analyse IP + Masque
+                </button>
+                <button onclick="switchTab('network')" id="tab-network" class="tab-btn px-6 py-4 font-semibold text-gray-400 hover:text-gray-200">
+                    Analyse Réseau
+                </button>
+                <button onclick="switchTab('check')" id="tab-check" class="tab-btn px-6 py-4 font-semibold text-gray-400 hover:text-gray-200">
+                    Vérification IP
+                </button>
+                <button onclick="switchTab('subnet')" id="tab-subnet" class="tab-btn px-6 py-4 font-semibold text-gray-400 hover:text-gray-200">
+                    Subnetting
+                </button>
+            </div>
+        </div>
+
+        <!-- Tab: Analyse IP + Masque -->
+        <div id="content-analyze" class="tab-content">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Input Section -->
+                <div class="lg:col-span-1">
+                    <div class="bg-dark-card rounded-lg border border-dark-border p-6">
+                        <h2 class="text-xl font-bold mb-4 text-blue-400">Paramètres</h2>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-2 text-gray-300">Adresse IPv4</label>
+                                <input type="text" id="ip-analyze" 
+                                    class="w-full px-4 py-2 bg-dark-bg border border-dark-border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mono"
+                                    placeholder="192.168.1.10" value="192.168.1.10">
+                                <p class="text-xs text-gray-500 mt-1">Format: xxx.xxx.xxx.xxx</p>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium mb-2 text-gray-300">Masque</label>
+                                <input type="text" id="mask-analyze" 
+                                    class="w-full px-4 py-2 bg-dark-bg border border-dark-border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mono"
+                                    placeholder="24 ou 255.255.255.0" value="24">
+                                <p class="text-xs text-gray-500 mt-1">CIDR (1-32) ou décimal</p>
+                            </div>
+                            
+                            <button onclick="analyzeIP()" 
+                                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-md transition-colors">
+                                Analyser
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Results Section -->
+                <div class="lg:col-span-2">
+                    <div id="results-analyze" class="hidden space-y-4"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Analyse Réseau -->
+        <div id="content-network" class="tab-content hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-1">
+                    <div class="bg-dark-card rounded-lg border border-dark-border p-6">
+                        <h2 class="text-xl font-bold mb-4 text-blue-400">Réseau à analyser</h2>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-2 text-gray-300">Adresse Réseau</label>
+                                <input type="text" id="network-ip" 
+                                    class="w-full px-4 py-2 bg-dark-bg border border-dark-border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mono"
+                                    placeholder="192.168.1.0" value="192.168.1.0">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium mb-2 text-gray-300">Masque CIDR</label>
+                                <input type="number" id="network-mask" min="1" max="32"
+                                    class="w-full px-4 py-2 bg-dark-bg border border-dark-border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mono"
+                                    value="28">
+                                <p class="text-xs text-gray-500 mt-1">Recommandé: /24 à /30 pour éviter les gros réseaux</p>
+                            </div>
+                            
+                            <button onclick="analyzeNetwork()" 
+                                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-md transition-colors">
+                                Générer les adresses
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-2">
+                    <div id="results-network" class="hidden space-y-4"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Vérification IP -->
+        <div id="content-check" class="tab-content hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-1">
+                    <div class="bg-dark-card rounded-lg border border-dark-border p-6">
+                        <h2 class="text-xl font-bold mb-4 text-blue-400">Vérifier l'appartenance</h2>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-2 text-gray-300">Adresse IP à tester</label>
+                                <input type="text" id="check-ip" 
+                                    class="w-full px-4 py-2 bg-dark-bg border border-dark-border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mono"
+                                    placeholder="192.168.1.50" value="192.168.1.50">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium mb-2 text-gray-300">Réseau</label>
+                                <input type="text" id="check-network" 
+                                    class="w-full px-4 py-2 bg-dark-bg border border-dark-border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mono"
+                                    placeholder="192.168.1.0" value="192.168.1.0">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium mb-2 text-gray-300">Masque CIDR</label>
+                                <input type="number" id="check-mask" min="1" max="32"
+                                    class="w-full px-4 py-2 bg-dark-bg border border-dark-border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mono"
+                                    value="24">
+                            </div>
+                            
+                            <button onclick="checkIP()" 
+                                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-md transition-colors">
+                                Vérifier
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-2">
+                    <div id="results-check" class="hidden space-y-4"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Subnetting -->
+        <div id="content-subnet" class="tab-content hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-1">
+                    <div class="bg-dark-card rounded-lg border border-dark-border p-6">
+                        <h2 class="text-xl font-bold mb-4 text-blue-400">Découpage réseau</h2>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-2 text-gray-300">Réseau initial</label>
+                                <input type="text" id="subnet-network" 
+                                    class="w-full px-4 py-2 bg-dark-bg border border-dark-border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mono"
+                                    placeholder="192.168.1.0" value="192.168.1.0">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium mb-2 text-gray-300">Masque initial</label>
+                                <input type="number" id="subnet-mask" min="1" max="30"
+                                    class="w-full px-4 py-2 bg-dark-bg border border-dark-border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mono"
+                                    value="24">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium mb-2 text-gray-300">Nouveau masque (sous-réseaux)</label>
+                                <input type="number" id="subnet-newmask" min="1" max="32"
+                                    class="w-full px-4 py-2 bg-dark-bg border border-dark-border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mono"
+                                    value="26">
+                                <p class="text-xs text-gray-500 mt-1">Doit être > masque initial</p>
+                            </div>
+                            
+                            <button onclick="calculateSubnetting()" 
+                                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-md transition-colors">
+                                Calculer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-2">
+                    <div id="results-subnet" class="hidden space-y-4"></div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-dark-card border-t border-dark-border mt-12">
+        <div class="max-w-7xl mx-auto px-4 py-6 text-center text-gray-400 text-sm">
+            <p>IPv4 Network Calculator - Professional Tool for Network Engineers</p>
+            <p class="mt-1">Tous les calculs sont effectués côté client - Aucune donnée n'est transmise</p>
+        </div>
+    </footer>
+
+    <script>
+        // ============================================
+        // UTILITAIRES DE BASE
+        // ============================================
+
+        /**
+         * Valide une adresse IPv4
+         * @param {string} ip - Adresse IP à valider
+         * @returns {boolean}
+         */
+        function isValidIP(ip) {
+            const pattern = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+            const match = ip.match(pattern);
+            if (!match) return false;
+            
+            for (let i = 1; i <= 4; i++) {
+                const octet = parseInt(match[i]);
+                if (octet < 0 || octet > 255) return false;
+            }
+            return true;
+        }
+
+        /**
+         * Convertit une IP en entier 32 bits
+         * @param {string} ip
+         * @returns {number}
+         */
+        function ipToInt(ip) {
+            const parts = ip.split('.');
+            return (parseInt(parts[0]) << 24) + 
+                   (parseInt(parts[1]) << 16) + 
+                   (parseInt(parts[2]) << 8) + 
+                   parseInt(parts[3]);
+        }
+
+        /**
+         * Convertit un entier en IP
+         * @param {number} num
+         * @returns {string}
+         */
+        function intToIP(num) {
+            return [
+                (num >>> 24) & 0xFF,
+                (num >>> 16) & 0xFF,
+                (num >>> 8) & 0xFF,
+                num & 0xFF
+            ].join('.');
+        }
+
+        /**
+         * Convertit IP en binaire formaté
+         * @param {string} ip
+         * @returns {string}
+         */
+        function ipToBinary(ip) {
+            return ip.split('.').map(octet => 
+                parseInt(octet).toString(2).padStart(8, '0')
+            ).join('.');
+        }
+
+        /**
+         * Convertit CIDR en masque décimal
+         * @param {number} cidr
+         * @returns {string}
+         */
+        function cidrToMask(cidr) {
+            const mask = ~((1 << (32 - cidr)) - 1);
+            return intToIP(mask >>> 0);
+        }
+
+        /**
+         * Convertit masque décimal en CIDR
+         * @param {string} mask
+         * @returns {number}
+         */
+        function maskToCIDR(mask) {
+            const binary = ipToInt(mask).toString(2);
+            return binary.split('1').length - 1;
+        }
+
+        /**
+         * Parse le masque (CIDR ou décimal)
+         * @param {string} input
+         * @returns {object} {cidr: number, decimal: string}
+         */
+        function parseMask(input) {
+            input = input.trim();
+            
+            // Si c'est un nombre (CIDR)
+            if (/^\d+$/.test(input)) {
+                const cidr = parseInt(input);
+                if (cidr < 1 || cidr > 32) {
+                    throw new Error('CIDR doit être entre 1 et 32');
+                }
+                return { cidr, decimal: cidrToMask(cidr) };
+            }
+            
+            // Si c'est une IP (masque décimal)
+            if (isValidIP(input)) {
+                return { cidr: maskToCIDR(input), decimal: input };
+            }
+            
+            throw new Error('Format de masque invalide');
+        }
+
+        /**
+         * Détermine la classe du réseau
+         * @param {string} ip
+         * @returns {string}
+         */
+        function getIPClass(ip) {
+            const firstOctet = parseInt(ip.split('.')[0]);
+            if (firstOctet >= 1 && firstOctet <= 126) return 'A (1.0.0.0 à 126.255.255.255)';
+            if (firstOctet >= 128 && firstOctet <= 191) return 'B (128.0.0.0 à 191.255.255.255)';
+            if (firstOctet >= 192 && firstOctet <= 223) return 'C (192.0.0.0 à 223.255.255.255)';
+            if (firstOctet >= 224 && firstOctet <= 239) return 'D - Multicast (224.0.0.0 à 239.255.255.255)';
+            if (firstOctet >= 240 && firstOctet <= 255) return 'E - Réservé (240.0.0.0 à 255.255.255.255)';
+            return 'Invalide';
+        }
+
+        // ============================================
+        // FONCTIONS PRINCIPALES
+        // ============================================
+
+        /**
+         * Analyse complète d'une IP + masque
+         */
+        function analyzeIP() {
+            try {
+                const ip = document.getElementById('ip-analyze').value.trim();
+                const maskInput = document.getElementById('mask-analyze').value.trim();
+                
+                // Validation
+                if (!isValidIP(ip)) {
+                    throw new Error('Adresse IP invalide');
+                }
+                
+                const mask = parseMask(maskInput);
+                
+                // Calculs réseau
+                const ipInt = ipToInt(ip);
+                const maskInt = ipToInt(mask.decimal);
+                const networkInt = ipInt & maskInt;
+                const broadcastInt = networkInt | (~maskInt >>> 0);
+                const firstHostInt = networkInt + 1;
+                const lastHostInt = broadcastInt - 1;
+                
+                const totalHosts = Math.pow(2, 32 - mask.cidr);
+                const usableHosts = totalHosts - 2;
+                
+                // Génération du HTML de résultat
+                const resultsDiv = document.getElementById('results-analyze');
+                resultsDiv.innerHTML = `
+                    <!-- Informations principales -->
+                    <div class="bg-dark-card rounded-lg border border-dark-border p-6 result-section">
+                        <h3 class="text-lg font-bold mb-4 text-blue-400">Informations Réseau</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-sm text-gray-400">Adresse réseau</p>
+                                <p class="mono text-lg font-semibold text-green-400">${intToIP(networkInt)}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-400">Adresse broadcast</p>
+                                <p class="mono text-lg font-semibold text-red-400">${intToIP(broadcastInt)}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-400">Première IP utilisable</p>
+                                <p class="mono text-lg font-semibold">${intToIP(firstHostInt)}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-400">Dernière IP utilisable</p>
+                                <p class="mono text-lg font-semibold">${intToIP(lastHostInt)}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Masque et capacité -->
+                    <div class="bg-dark-card rounded-lg border border-dark-border p-6 result-section">
+                        <h3 class="text-lg font-bold mb-4 text-blue-400">Masque et Capacité</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-sm text-gray-400">Masque décimal</p>
+                                <p class="mono text-lg font-semibold">${mask.decimal}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-400">Masque CIDR</p>
+                                <p class="mono text-lg font-semibold">/${mask.cidr}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-400">Bits réseau / hôtes</p>
+                                <p class="mono text-lg font-semibold">${mask.cidr} / ${32 - mask.cidr}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-400">Classe réseau</p>
+                                <p class="text-lg font-semibold">${getIPClass(ip)}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-400">Total d'adresses</p>
+                                <p class="mono text-lg font-semibold text-blue-400">${totalHosts.toLocaleString()}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-400">Hôtes utilisables</p>
+                                <p class="mono text-lg font-semibold text-green-400">${usableHosts.toLocaleString()}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Représentation binaire -->
+                    <div class="bg-dark-card rounded-lg border border-dark-border p-6 result-section">
+                        <h3 class="text-lg font-bold mb-4 text-blue-400">Représentation Binaire</h3>
+                        <div class="space-y-2 mono text-sm">
+                            <div class="flex justify-between items-center p-2 bg-dark-bg rounded">
+                                <span class="text-gray-400 w-32">IP:</span>
+                                <span class="text-yellow-400">${ipToBinary(ip)}</span>
+                            </div>
+                            <div class="flex justify-between items-center p-2 bg-dark-bg rounded">
+                                <span class="text-gray-400 w-32">Masque:</span>
+                                <span class="text-blue-400">${ipToBinary(mask.decimal)}</span>
+                            </div>
+                            <div class="flex justify-between items-center p-2 bg-dark-bg rounded">
+                                <span class="text-gray-400 w-32">Réseau:</span>
+                                <span class="text-green-400">${ipToBinary(intToIP(networkInt))}</span>
+                            </div>
+                            <div class="flex justify-between items-center p-2 bg-dark-bg rounded">
+                                <span class="text-gray-400 w-32">Broadcast:</span>
+                                <span class="text-red-400">${ipToBinary(intToIP(broadcastInt))}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                resultsDiv.classList.remove('hidden');
+                
+            } catch (error) {
+                showError('results-analyze', error.message);
+            }
+        }
+
+        /**
+         * Analyse d'un réseau complet
+         */
+        function analyzeNetwork() {
+            try {
+                const networkIP = document.getElementById('network-ip').value.trim();
+                const cidr = parseInt(document.getElementById('network-mask').value);
+                
+                if (!isValidIP(networkIP)) {
+                    throw new Error('Adresse réseau invalide');
+                }
+                
+                if (cidr < 1 || cidr > 32) {
+                    throw new Error('CIDR doit être entre 1 et 32');
+                }
+                
+                // Limite de sécurité
+                const totalHosts = Math.pow(2, 32 - cidr);
+                if (totalHosts > 1024) {
+                    throw new Error(`Réseau trop grand (${totalHosts.toLocaleString()} adresses). Utilisez un masque >= /22`);
+                }
+                
+                const maskInt = ipToInt(cidrToMask(cidr));
+                const networkInt = ipToInt(networkIP) & maskInt;
+                const broadcastInt = networkInt | (~maskInt >>> 0);
+                
+                // Génération de toutes les adresses
+                let ipList = '';
+                for (let i = networkInt; i <= broadcastInt; i++) {
+                    const currentIP = intToIP(i);
+                    let badge = '';
+                    let textColor = 'text-gray-300';
+                    
+                    if (i === networkInt) {
+                        badge = '<span class="ml-2 px-2 py-1 bg-green-900/30 text-green-400 text-xs rounded border border-green-700">RÉSEAU</span>';
+                        textColor = 'text-green-400';
+                    } else if (i === broadcastInt) {
+                        badge = '<span class="ml-2 px-2 py-1 bg-red-900/30 text-red-400 text-xs rounded border border-red-700">BROADCAST</span>';
+                        textColor = 'text-red-400';
+                    }
+                    
+                    ipList += `
+                        <div class="flex items-center justify-between p-2 bg-dark-bg rounded hover:bg-dark-hover transition-colors">
+                            <span class="mono ${textColor}">${currentIP}</span>
+                            ${badge}
+                        </div>
+                    `;
+                }
+                
+                const resultsDiv = document.getElementById('results-network');
+                resultsDiv.innerHTML = `
+                    <div class="bg-dark-card rounded-lg border border-dark-border p-6 result-section">
+                        <h3 class="text-lg font-bold mb-4 text-blue-400">Informations Réseau ${networkIP}/${cidr}</h3>
+                        <div class="grid grid-cols-3 gap-4 mb-4">
+                            <div class="p-3 bg-dark-bg rounded">
+                                <p class="text-sm text-gray-400">Total adresses</p>
+                                <p class="text-xl font-bold text-blue-400">${totalHosts}</p>
+                            </div>
+                            <div class="p-3 bg-dark-bg rounded">
+                                <p class="text-sm text-gray-400">Hôtes utilisables</p>
+                                <p class="text-xl font-bold text-green-400">${totalHosts - 2}</p>
+                            </div>
+                            <div class="p-3 bg-dark-bg rounded">
+                                <p class="text-sm text-gray-400">Masque</p>
+                                <p class="text-xl font-bold mono">${cidrToMask(cidr)}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-dark-card rounded-lg border border-dark-border p-6 result-section">
+                        <h3 class="text-lg font-bold mb-4 text-blue-400">Liste complète des adresses</h3>
+                        <div class="max-h-96 overflow-y-auto space-y-1">
+                            ${ipList}
+                        </div>
+                    </div>
+                `;
+                
+                resultsDiv.classList.remove('hidden');
+                
+            } catch (error) {
+                showError('results-network', error.message);
+            }
+        }
+
+        /**
+         * Vérifie si une IP appartient à un réseau
+         */
+        function checkIP() {
+            try {
+                const checkIPAddr = document.getElementById('check-ip').value.trim();
+                const networkIP = document.getElementById('check-network').value.trim();
+                const cidr = parseInt(document.getElementById('check-mask').value);
+                
+                if (!isValidIP(checkIPAddr)) {
+                    throw new Error('Adresse IP à tester invalide');
+                }
+                
+                if (!isValidIP(networkIP)) {
+                    throw new Error('Adresse réseau invalide');
+                }
+                
+                if (cidr < 1 || cidr > 32) {
+                    throw new Error('CIDR doit être entre 1 et 32');
+                }
+                
+                // Calculs
+                const checkInt = ipToInt(checkIPAddr);
+                const maskInt = ipToInt(cidrToMask(cidr));
+                const networkInt = ipToInt(networkIP) & maskInt;
+                const broadcastInt = networkInt | (~maskInt >>> 0);
+                const checkNetworkInt = checkInt & maskInt;
+                
+                const belongs = checkNetworkInt === networkInt;
+                
+                // Analyse détaillée
+                let statusHTML = '';
+                let explanation = '';
+                
+                if (belongs) {
+                    if (checkInt === networkInt) {
+                        statusHTML = `
+                            <div class="p-6 bg-yellow-900/20 border-2 border-yellow-600 rounded-lg">
+                                <div class="flex items-center gap-3">
+                                    <svg class="w-8 h-8 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                                    </svg>
+                                    <div>
+                                        <p class="text-xl font-bold text-yellow-400">ATTENTION - Adresse réseau</p>
+                                        <p class="text-yellow-300 mt-1">Cette IP est l'adresse réseau, elle n'est pas utilisable pour un hôte</p>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    } else if (checkInt === broadcastInt) {
+                        statusHTML = `
+                            <div class="p-6 bg-yellow-900/20 border-2 border-yellow-600 rounded-lg">
+                                <div class="flex items-center gap-3">
+                                    <svg class="w-8 h-8 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                                    </svg>
+                                    <div>
+                                        <p class="text-xl font-bold text-yellow-400">ATTENTION - Adresse broadcast</p>
+                                        <p class="text-yellow-300 mt-1">Cette IP est l'adresse de diffusion, elle n'est pas utilisable pour un hôte</p>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        statusHTML = `
+                            <div class="p-6 bg-green-900/20 border-2 border-green-600 rounded-lg">
+                                <div class="flex items-center gap-3">
+                                    <svg class="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                    <div>
+                                        <p class="text-xl font-bold text-green-400">IP APPARTIENT AU RÉSEAU</p>
+                                        <p class="text-green-300 mt-1">Cette adresse est une IP hôte utilisable dans ce réseau</p>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    explanation = `L'adresse ${checkIPAddr} appartient au réseau car son adresse réseau calculée (${intToIP(checkNetworkInt)}) correspond à l'adresse réseau du réseau cible (${intToIP(networkInt)}).`;
+                    
+                } else {
+                    statusHTML = `
+                        <div class="p-6 bg-red-900/20 border-2 border-red-600 rounded-lg">
+                            <div class="flex items-center gap-3">
+                                <svg class="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <div>
+                                    <p class="text-xl font-bold text-red-400">IP N'APPARTIENT PAS AU RÉSEAU</p>
+                                    <p class="text-red-300 mt-1">Cette adresse fait partie d'un autre réseau</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    explanation = `L'adresse ${checkIPAddr} n'appartient PAS au réseau car son adresse réseau calculée (${intToIP(checkNetworkInt)}) est différente de l'adresse réseau cible (${intToIP(networkInt)}).`;
+                }
+                
+                const resultsDiv = document.getElementById('results-check');
+                resultsDiv.innerHTML = `
+                    <div class="result-section">
+                        ${statusHTML}
+                    </div>
+
+                    <div class="bg-dark-card rounded-lg border border-dark-border p-6 result-section">
+                        <h3 class="text-lg font-bold mb-4 text-blue-400">Analyse détaillée</h3>
+                        <p class="text-gray-300 mb-4">${explanation}</p>
+                        
+                        <div class="grid grid-cols-2 gap-4 mt-4">
+                            <div class="p-3 bg-dark-bg rounded">
+                                <p class="text-sm text-gray-400">Plage IP du réseau</p>
+                                <p class="mono text-sm font-semibold">${intToIP(networkInt)} → ${intToIP(broadcastInt)}</p>
+                            </div>
+                            <div class="p-3 bg-dark-bg rounded">
+                                <p class="text-sm text-gray-400">IP testée</p>
+                                <p class="mono text-sm font-semibold">${checkIPAddr}</p>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 p-4 bg-dark-bg rounded">
+                            <h4 class="font-semibold mb-2 text-blue-300">Comparaison binaire</h4>
+                            <div class="space-y-1 mono text-xs">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">IP testée:</span>
+                                    <span class="text-yellow-400">${ipToBinary(checkIPAddr)}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Masque:</span>
+                                    <span class="text-blue-400">${ipToBinary(cidrToMask(cidr))}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Réseau calculé:</span>
+                                    <span class="${belongs ? 'text-green-400' : 'text-red-400'}">${ipToBinary(intToIP(checkNetworkInt))}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Réseau cible:</span>
+                                    <span class="text-green-400">${ipToBinary(intToIP(networkInt))}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                resultsDiv.classList.remove('hidden');
+                
+            } catch (error) {
+                showError('results-check', error.message);
+            }
+        }
+
+        /**
+         * Calcule le subnetting d'un réseau
+         */
+        function calculateSubnetting() {
+            try {
+                const networkIP = document.getElementById('subnet-network').value.trim();
+                const originalCIDR = parseInt(document.getElementById('subnet-mask').value);
+                const newCIDR = parseInt(document.getElementById('subnet-newmask').value);
+                
+                if (!isValidIP(networkIP)) {
+                    throw new Error('Adresse réseau invalide');
+                }
+                
+                if (originalCIDR < 1 || originalCIDR > 30) {
+                    throw new Error('Masque initial doit être entre 1 et 30');
+                }
+                
+                if (newCIDR < 1 || newCIDR > 32) {
+                    throw new Error('Nouveau masque doit être entre 1 et 32');
+                }
+                
+                if (newCIDR <= originalCIDR) {
+                    throw new Error('Le nouveau masque doit être plus grand (plus spécifique) que le masque initial');
+                }
+                
+                // Calculs de base
+                const originalMaskInt = ipToInt(cidrToMask(originalCIDR));
+                const originalNetworkInt = ipToInt(networkIP) & originalMaskInt;
+                
+                const originalTotalHosts = Math.pow(2, 32 - originalCIDR);
+                const subnetSize = Math.pow(2, 32 - newCIDR);
+                const numberOfSubnets = Math.pow(2, newCIDR - originalCIDR);
+                const hostsPerSubnet = subnetSize - 2;
+                
+                // Limite de sécurité
+                if (numberOfSubnets > 256) {
+                    throw new Error(`Trop de sous-réseaux (${numberOfSubnets}). Limitez à 256 maximum.`);
+                }
+                
+                // Génération des sous-réseaux
+                let subnetsHTML = '';
+                for (let i = 0; i < numberOfSubnets; i++) {
+                    const subnetNetworkInt = originalNetworkInt + (i * subnetSize);
+                    const subnetBroadcastInt = subnetNetworkInt + subnetSize - 1;
+                    const firstHostInt = subnetNetworkInt + 1;
+                    const lastHostInt = subnetBroadcastInt - 1;
+                    
+                    subnetsHTML += `
+                        <div class="p-4 bg-dark-bg rounded-lg border border-dark-border hover:border-blue-500 transition-colors">
+                            <div class="flex items-center justify-between mb-3">
+                                <h4 class="font-bold text-blue-400">Sous-réseau #${i + 1}</h4>
+                                <span class="px-2 py-1 bg-blue-900/30 text-blue-400 text-xs rounded mono">/${newCIDR}</span>
+                            </div>
+                            <div class="space-y-2 text-sm mono">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Réseau:</span>
+                                    <span class="text-green-400 font-semibold">${intToIP(subnetNetworkInt)}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Première IP:</span>
+                                    <span>${intToIP(firstHostInt)}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Dernière IP:</span>
+                                    <span>${intToIP(lastHostInt)}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Broadcast:</span>
+                                    <span class="text-red-400 font-semibold">${intToIP(subnetBroadcastInt)}</span>
+                                </div>
+                                <div class="flex justify-between pt-2 border-t border-dark-border">
+                                    <span class="text-gray-400">Hôtes:</span>
+                                    <span class="text-blue-400 font-semibold">${hostsPerSubnet}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                const resultsDiv = document.getElementById('results-subnet');
+                resultsDiv.innerHTML = `
+                    <div class="bg-dark-card rounded-lg border border-dark-border p-6 result-section">
+                        <h3 class="text-lg font-bold mb-4 text-blue-400">Résumé du découpage</h3>
+                        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div class="p-4 bg-dark-bg rounded-lg text-center">
+                                <p class="text-sm text-gray-400 mb-2">Réseau initial</p>
+                                <p class="mono text-lg font-bold text-blue-400">${intToIP(originalNetworkInt)}/${originalCIDR}</p>
+                            </div>
+                            <div class="p-4 bg-dark-bg rounded-lg text-center">
+                                <p class="text-sm text-gray-400 mb-2">Nombre de sous-réseaux</p>
+                                <p class="text-2xl font-bold text-green-400">${numberOfSubnets}</p>
+                            </div>
+                            <div class="p-4 bg-dark-bg rounded-lg text-center">
+                                <p class="text-sm text-gray-400 mb-2">Hôtes par sous-réseau</p>
+                                <p class="text-2xl font-bold text-yellow-400">${hostsPerSubnet}</p>
+                            </div>
+                            <div class="p-4 bg-dark-bg rounded-lg text-center">
+                                <p class="text-sm text-gray-400 mb-2">Nouveau masque</p>
+                                <p class="mono text-lg font-bold text-purple-400">/${newCIDR}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4 p-4 bg-blue-900/20 border border-blue-700 rounded-lg">
+                            <p class="text-sm">
+                                <span class="font-semibold text-blue-300">Calcul:</span>
+                                <span class="text-gray-300"> Bits empruntés: ${newCIDR - originalCIDR} → 2^${newCIDR - originalCIDR} = ${numberOfSubnets} sous-réseaux</span>
+                            </p>
+                            <p class="text-sm mt-1">
+                                <span class="font-semibold text-blue-300">Masque décimal:</span>
+                                <span class="mono text-gray-300"> ${cidrToMask(newCIDR)}</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="bg-dark-card rounded-lg border border-dark-border p-6 result-section">
+                        <h3 class="text-lg font-bold mb-4 text-blue-400">Liste des sous-réseaux (${numberOfSubnets})</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-96 overflow-y-auto">
+                            ${subnetsHTML}
+                        </div>
+                    </div>
+                `;
+                
+                resultsDiv.classList.remove('hidden');
+                
+            } catch (error) {
+                showError('results-subnet', error.message);
+            }
+        }
+
+        // ============================================
+        // GESTION UI
+        // ============================================
+
+        /**
+         * Change d'onglet
+         */
+        function switchTab(tabName) {
+            // Masquer tous les contenus
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.add('hidden');
+            });
+            
+            // Réinitialiser tous les boutons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('text-blue-400', 'border-b-2', 'border-blue-400');
+                btn.classList.add('text-gray-400');
+            });
+            
+            // Activer l'onglet sélectionné
+            document.getElementById('content-' + tabName).classList.remove('hidden');
+            const activeBtn = document.getElementById('tab-' + tabName);
+            activeBtn.classList.add('text-blue-400', 'border-b-2', 'border-blue-400');
+            activeBtn.classList.remove('text-gray-400');
+        }
+
+        /**
+         * Affiche un message d'erreur
+         */
+        function showError(resultsDivId, message) {
+            const resultsDiv = document.getElementById(resultsDivId);
+            resultsDiv.innerHTML = `
+                <div class="bg-red-900/20 border-2 border-red-600 rounded-lg p-6 result-section">
+                    <div class="flex items-center gap-3">
+                        <svg class="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <div>
+                            <p class="text-xl font-bold text-red-400">Erreur</p>
+                            <p class="text-red-300 mt-1">${message}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            resultsDiv.classList.remove('hidden');
+        }
+
+        // ============================================
+        // INITIALISATION
+        // ============================================
+
+        // Analyse automatique au chargement pour démonstration
+        document.addEventListener('DOMContentLoaded', function() {
+            analyzeIP();
+        });
+
+        // Support de la touche Entrée pour les formulaires
+        document.querySelectorAll('input').forEach(input => {
+            input.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    const parentTab = this.closest('.tab-content');
+                    if (parentTab) {
+                        const button = parentTab.querySelector('button[onclick^="analyze"], button[onclick^="check"], button[onclick^="calculate"]');
+                        if (button) button.click();
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
