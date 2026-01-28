@@ -1,0 +1,1814 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetSim Pro - Simulateur de Réseau Configurable</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0e1a;
+            --bg-secondary: #111827;
+            --bg-tertiary: #1a2332;
+            --accent-cyan: #00f5ff;
+            --accent-magenta: #ff00aa;
+            --accent-yellow: #ffed4e;
+            --text-primary: #e5e7eb;
+            --text-secondary: #9ca3af;
+            --border: #2d3748;
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            overflow-x: hidden;
+        }
+
+        .header-title {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 900;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .grid-bg {
+            background-image: 
+                linear-gradient(rgba(0, 245, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 245, 255, 0.03) 1px, transparent 1px);
+            background-size: 20px 20px;
+            animation: gridMove 20s linear infinite;
+        }
+
+        @keyframes gridMove {
+            0% { background-position: 0 0; }
+            100% { background-position: 20px 20px; }
+        }
+
+        .cyber-border {
+            position: relative;
+            border: 1px solid var(--border);
+        }
+
+        .cyber-border::before {
+            content: '';
+            position: absolute;
+            top: -1px;
+            left: -1px;
+            right: -1px;
+            bottom: -1px;
+            background: linear-gradient(45deg, var(--accent-cyan), var(--accent-magenta));
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: -1;
+            border-radius: inherit;
+        }
+
+        .cyber-border:hover::before {
+            opacity: 0.1;
+        }
+
+        .glow-text {
+            text-shadow: 0 0 10px currentColor;
+        }
+
+        .device-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .device-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent-cyan), transparent);
+            animation: scanline 3s linear infinite;
+        }
+
+        @keyframes scanline {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        .device-card:hover {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 20px rgba(0, 245, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .topology-canvas {
+            background: var(--bg-tertiary);
+            border: 2px solid var(--border);
+            min-height: 500px;
+            position: relative;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-magenta));
+            color: var(--bg-primary);
+            font-weight: 700;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.2);
+            transition: left 0.3s;
+        }
+
+        .btn-primary:hover::before {
+            left: 100%;
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--accent-cyan);
+            padding: 0.75rem 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .btn-secondary:hover {
+            background: var(--accent-cyan);
+            color: var(--bg-primary);
+            box-shadow: 0 0 15px rgba(0, 245, 255, 0.5);
+        }
+
+        .input-field {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 0.75rem;
+            width: 100%;
+            transition: all 0.3s;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 10px rgba(0, 245, 255, 0.3);
+        }
+
+        .tab-button {
+            padding: 1rem 2rem;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s;
+            border-bottom: 2px solid transparent;
+            font-family: 'JetBrains Mono', monospace;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .tab-button.active {
+            color: var(--accent-cyan);
+            border-bottom-color: var(--accent-cyan);
+            text-shadow: 0 0 10px var(--accent-cyan);
+        }
+
+        .device-icon {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            margin: 0 auto;
+        }
+
+        .log-entry {
+            padding: 0.5rem;
+            border-left: 2px solid var(--border);
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+            opacity: 0;
+            animation: fadeIn 0.3s forwards;
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+
+        .log-entry.success { border-left-color: var(--success); }
+        .log-entry.error { border-left-color: var(--error); }
+        .log-entry.warning { border-left-color: var(--warning); }
+        .log-entry.info { border-left-color: var(--accent-cyan); }
+
+        .network-node {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: var(--bg-secondary);
+            border: 2px solid var(--accent-cyan);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 0 20px rgba(0, 245, 255, 0.3);
+        }
+
+        .network-node:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 30px rgba(0, 245, 255, 0.6);
+        }
+
+        .network-link {
+            position: absolute;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-magenta));
+            transform-origin: left center;
+            opacity: 0.6;
+            transition: opacity 0.3s;
+        }
+
+        .network-link:hover {
+            opacity: 1;
+        }
+
+        .stats-card {
+            background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
+            border: 1px solid var(--border);
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+        }
+
+        .stats-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .badge-success { background: var(--success); color: white; }
+        .badge-error { background: var(--error); color: white; }
+        .badge-warning { background: var(--warning); color: var(--bg-primary); }
+        .badge-info { background: var(--accent-cyan); color: var(--bg-primary); }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--bg-secondary);
+            border: 2px solid var(--accent-cyan);
+            padding: 2rem;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 0 50px rgba(0, 245, 255, 0.5);
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        select.input-field {
+            cursor: pointer;
+        }
+
+        .device-type-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 1rem;
+        }
+
+        .device-type-btn {
+            background: var(--bg-tertiary);
+            border: 2px solid var(--border);
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+
+        .device-type-btn:hover {
+            border-color: var(--accent-cyan);
+            background: var(--bg-secondary);
+            box-shadow: 0 0 15px rgba(0, 245, 255, 0.3);
+        }
+
+        .device-type-btn.selected {
+            border-color: var(--accent-cyan);
+            background: rgba(0, 245, 255, 0.1);
+        }
+
+        .scrollbar-custom::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .scrollbar-custom::-webkit-scrollbar-track {
+            background: var(--bg-tertiary);
+        }
+
+        .scrollbar-custom::-webkit-scrollbar-thumb {
+            background: var(--accent-cyan);
+            border-radius: 4px;
+        }
+
+        .tooltip {
+            position: relative;
+        }
+
+        .tooltip::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            padding: 0.5rem;
+            border: 1px solid var(--accent-cyan);
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            font-size: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .tooltip:hover::after {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="grid-bg">
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-gray-900 to-gray-800 border-b-2 border-cyan-500 shadow-lg">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <div class="text-4xl glow-text text-cyan-400">⚡</div>
+                    <h1 class="header-title text-3xl text-cyan-400 glow-text">NetSim Pro</h1>
+                    <span class="text-xs text-gray-400 mt-2">v2.1.0</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span class="text-sm text-gray-400">Mode: <span class="text-cyan-400">Configuration</span></span>
+                    <button onclick="exportConfig()" class="btn-secondary text-sm">Exporter</button>
+                    <button onclick="resetAll()" class="btn-secondary text-sm">Reset</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="container mx-auto px-6 py-8">
+        <!-- Stats Bar -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div class="stats-card">
+                <div class="text-xs text-gray-400 uppercase mb-2">Équipements</div>
+                <div class="stats-value" id="statsDevices">0</div>
+            </div>
+            <div class="stats-card">
+                <div class="text-xs text-gray-400 uppercase mb-2">Réseaux</div>
+                <div class="stats-value" id="statsNetworks">0</div>
+            </div>
+            <div class="stats-card">
+                <div class="text-xs text-gray-400 uppercase mb-2">Connexions</div>
+                <div class="stats-value" id="statsConnections">0</div>
+            </div>
+            <div class="stats-card">
+                <div class="text-xs text-gray-400 uppercase mb-2">État</div>
+                <div class="stats-value text-green-400" id="statsStatus">OK</div>
+            </div>
+        </div>
+
+        <!-- Main Tabs -->
+        <div class="cyber-border bg-gray-900 rounded-lg overflow-hidden mb-8">
+            <div class="flex border-b border-gray-700">
+                <button class="tab-button active" onclick="switchTab('config')">Configuration</button>
+                <button class="tab-button" onclick="switchTab('topology')">Topologie</button>
+                <button class="tab-button" onclick="switchTab('simulation')">Simulation</button>
+                <button class="tab-button" onclick="switchTab('validation')">Validation</button>
+            </div>
+
+            <!-- Tab Content -->
+            <div class="p-6">
+                <!-- Configuration Tab -->
+                <div id="tab-config" class="tab-content">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <!-- Left Column: Equipment & Networks -->
+                        <div class="space-y-6">
+                            <!-- Network Type Selection -->
+                            <div class="cyber-border p-6 rounded-lg bg-gray-800">
+                                <h3 class="text-xl font-bold text-cyan-400 mb-4 flex items-center">
+                                    <span class="mr-2">🔧</span> Type de Configuration
+                                </h3>
+                                <select id="configType" class="input-field" onchange="onConfigTypeChange()">
+                                    <option value="simple">Configuration Simple (Flat Network)</option>
+                                    <option value="vlan">Configuration Segmentée (VLAN)</option>
+                                    <option value="multi">Multi Sous-Réseaux</option>
+                                    <option value="services">Services Centralisés (DNS, NAS)</option>
+                                    <option value="wifi">Réseau avec WiFi Isolé</option>
+                                </select>
+                                <div id="configDescription" class="mt-4 text-sm text-gray-400"></div>
+                            </div>
+
+                            <!-- Add Device Section -->
+                            <div class="cyber-border p-6 rounded-lg bg-gray-800">
+                                <h3 class="text-xl font-bold text-cyan-400 mb-4 flex items-center">
+                                    <span class="mr-2">🖥️</span> Ajouter un Équipement
+                                </h3>
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm text-gray-400 mb-2">Type d'équipement</label>
+                                        <select id="deviceType" class="input-field">
+                                            <option value="server">Serveur</option>
+                                            <option value="client">Client</option>
+                                            <option value="vm">Machine Virtuelle</option>
+                                            <option value="dns">DNS</option>
+                                            <option value="nas">NAS</option>
+                                            <option value="bridge">Bridge</option>
+                                            <option value="switch">Switch</option>
+                                            <option value="router">Router</option>
+                                            <option value="wifi">WiFi AP</option>
+                                            <option value="ssh">SSH Service</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm text-gray-400 mb-2">Nom de l'équipement</label>
+                                        <input type="text" id="deviceName" class="input-field" placeholder="Ex: srv-web-01">
+                                    </div>
+                                    <button onclick="addDevice()" class="btn-primary w-full">Ajouter l'équipement</button>
+                                </div>
+                            </div>
+
+                            <!-- Add Network Section -->
+                            <div class="cyber-border p-6 rounded-lg bg-gray-800">
+                                <h3 class="text-xl font-bold text-cyan-400 mb-4 flex items-center">
+                                    <span class="mr-2">🌐</span> Définir un Réseau
+                                </h3>
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm text-gray-400 mb-2">Type de réseau</label>
+                                        <select id="networkType" class="input-field" onchange="onNetworkTypeChange()">
+                                            <option value="lan">LAN</option>
+                                            <option value="vlan">VLAN</option>
+                                            <option value="wifi">WiFi</option>
+                                            <option value="dmz">DMZ</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm text-gray-400 mb-2">Nom du réseau</label>
+                                        <input type="text" id="networkName" class="input-field" placeholder="Ex: LAN-PRODUCTION">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm text-gray-400 mb-2">Adresse réseau (CIDR)</label>
+                                        <input type="text" id="networkAddress" class="input-field" placeholder="Ex: 192.168.1.0/24">
+                                    </div>
+                                    <div id="vlanIdField" style="display: none;">
+                                        <label class="block text-sm text-gray-400 mb-2">VLAN ID</label>
+                                        <input type="number" id="vlanId" class="input-field" placeholder="Ex: 10" min="1" max="4094">
+                                    </div>
+                                    <button onclick="addNetwork()" class="btn-primary w-full">Créer le réseau</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Column: Device List -->
+                        <div class="space-y-6">
+                            <!-- Devices List -->
+                            <div class="cyber-border p-6 rounded-lg bg-gray-800">
+                                <h3 class="text-xl font-bold text-cyan-400 mb-4 flex items-center">
+                                    <span class="mr-2">📋</span> Équipements Configurés
+                                    <span class="ml-auto text-sm font-normal text-gray-400" id="deviceCount">0 équipement(s)</span>
+                                </h3>
+                                <div id="devicesList" class="space-y-3 max-h-96 overflow-y-auto scrollbar-custom">
+                                    <div class="text-center text-gray-500 py-8">Aucun équipement configuré</div>
+                                </div>
+                            </div>
+
+                            <!-- Networks List -->
+                            <div class="cyber-border p-6 rounded-lg bg-gray-800">
+                                <h3 class="text-xl font-bold text-cyan-400 mb-4 flex items-center">
+                                    <span class="mr-2">🔌</span> Réseaux Configurés
+                                    <span class="ml-auto text-sm font-normal text-gray-400" id="networkCount">0 réseau(x)</span>
+                                </h3>
+                                <div id="networksList" class="space-y-3 max-h-96 overflow-y-auto scrollbar-custom">
+                                    <div class="text-center text-gray-500 py-8">Aucun réseau configuré</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Topology Tab -->
+                <div id="tab-topology" class="tab-content" style="display: none;">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <div class="lg:col-span-2">
+                            <div class="cyber-border rounded-lg bg-gray-800 p-6">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h3 class="text-xl font-bold text-cyan-400 flex items-center">
+                                        <span class="mr-2">🗺️</span> Topologie Réseau
+                                    </h3>
+                                    <button onclick="regenerateTopology()" class="btn-secondary text-sm">Régénérer</button>
+                                </div>
+                                <div id="topologyCanvas" class="topology-canvas rounded relative"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="cyber-border rounded-lg bg-gray-800 p-6">
+                                <h3 class="text-xl font-bold text-cyan-400 mb-4 flex items-center">
+                                    <span class="mr-2">ℹ️</span> Détails
+                                </h3>
+                                <div id="topologyDetails" class="text-sm text-gray-400">
+                                    Sélectionnez un équipement dans la topologie pour voir ses détails.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Simulation Tab -->
+                <div id="tab-simulation" class="tab-content" style="display: none;">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div class="cyber-border p-6 rounded-lg bg-gray-800">
+                            <h3 class="text-xl font-bold text-cyan-400 mb-4 flex items-center">
+                                <span class="mr-2">🔬</span> Test de Connectivité
+                            </h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm text-gray-400 mb-2">Source</label>
+                                    <select id="simSource" class="input-field"></select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-gray-400 mb-2">Destination</label>
+                                    <select id="simDestination" class="input-field"></select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-gray-400 mb-2">Type de test</label>
+                                    <select id="simType" class="input-field">
+                                        <option value="ping">PING (ICMP)</option>
+                                        <option value="tcp">TCP Connection</option>
+                                        <option value="dns">DNS Query</option>
+                                        <option value="ssh">SSH Access</option>
+                                    </select>
+                                </div>
+                                <button onclick="runSimulation()" class="btn-primary w-full">Lancer le test</button>
+                            </div>
+                            <div id="simResult" class="mt-6"></div>
+                        </div>
+                        <div class="cyber-border p-6 rounded-lg bg-gray-800">
+                            <h3 class="text-xl font-bold text-cyan-400 mb-4 flex items-center">
+                                <span class="mr-2">📊</span> Résultats de Simulation
+                            </h3>
+                            <div id="simHistory" class="space-y-2 max-h-96 overflow-y-auto scrollbar-custom">
+                                <div class="text-center text-gray-500 py-8">Aucune simulation lancée</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Validation Tab -->
+                <div id="tab-validation" class="tab-content" style="display: none;">
+                    <div class="cyber-border p-6 rounded-lg bg-gray-800 mb-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-xl font-bold text-cyan-400 flex items-center">
+                                <span class="mr-2">✓</span> Validation de Configuration
+                            </h3>
+                            <button onclick="validateConfiguration()" class="btn-primary">Valider la configuration</button>
+                        </div>
+                        <div id="validationResults"></div>
+                    </div>
+                    <div class="cyber-border p-6 rounded-lg bg-gray-800">
+                        <h3 class="text-xl font-bold text-cyan-400 mb-4 flex items-center">
+                            <span class="mr-2">📝</span> Logs Système
+                        </h3>
+                        <div id="systemLogs" class="space-y-2 max-h-96 overflow-y-auto scrollbar-custom">
+                            <div class="log-entry info">Système initialisé - NetSim Pro v2.1.0</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Device Detail Modal -->
+    <div id="deviceModal" class="modal">
+        <div class="modal-content">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold text-cyan-400 header-title">Configuration de l'équipement</h2>
+                <button onclick="closeDeviceModal()" class="text-2xl text-gray-400 hover:text-cyan-400">&times;</button>
+            </div>
+            <div id="deviceModalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // DATA MODELS
+        // ============================================
+
+        class Network {
+            constructor(name, address, type, vlanId = null) {
+                this.id = Date.now() + Math.random();
+                this.name = name;
+                this.address = address; // CIDR format
+                this.type = type; // lan, vlan, wifi, dmz
+                this.vlanId = vlanId;
+                this.devices = [];
+                this.gateway = null;
+                
+                this.parseAddress();
+            }
+
+            parseAddress() {
+                const parts = this.address.split('/');
+                this.networkAddress = parts[0];
+                this.prefix = parseInt(parts[1]);
+                this.netmask = this.calculateNetmask(this.prefix);
+            }
+
+            calculateNetmask(prefix) {
+                const mask = [];
+                for (let i = 0; i < 4; i++) {
+                    const n = Math.min(prefix, 8);
+                    mask.push(256 - Math.pow(2, 8 - n));
+                    prefix -= n;
+                }
+                return mask.join('.');
+            }
+
+            isIPInRange(ip) {
+                const ipParts = ip.split('.').map(Number);
+                const netParts = this.networkAddress.split('.').map(Number);
+                const maskParts = this.netmask.split('.').map(Number);
+
+                for (let i = 0; i < 4; i++) {
+                    if ((ipParts[i] & maskParts[i]) !== (netParts[i] & maskParts[i])) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            getAvailableIP() {
+                const baseIP = this.networkAddress.split('.').map(Number);
+                const usedIPs = this.devices.map(d => d.ipv4);
+                
+                for (let i = 10; i < 254; i++) {
+                    const testIP = [...baseIP];
+                    testIP[3] = i;
+                    const ipString = testIP.join('.');
+                    if (!usedIPs.includes(ipString)) {
+                        return ipString;
+                    }
+                }
+                return null;
+            }
+        }
+
+        class Device {
+            constructor(name, type) {
+                this.id = Date.now() + Math.random();
+                this.name = name;
+                this.type = type; // server, client, vm, dns, nas, bridge, switch, router, wifi, ssh
+                this.interfaces = [];
+                this.ipv4 = null;
+                this.ipv6 = null;
+                this.protocol = 'ipv4'; // ipv4, ipv6, dual
+                this.network = null;
+                this.gateway = null;
+                this.services = [];
+                this.vlan = null;
+            }
+
+            addInterface(interfaceName, network) {
+                this.interfaces.push({
+                    name: interfaceName,
+                    network: network,
+                    ipv4: null,
+                    ipv6: null
+                });
+            }
+
+            assignIP(network) {
+                this.network = network;
+                this.ipv4 = network.getAvailableIP();
+                
+                if (this.protocol === 'ipv6' || this.protocol === 'dual') {
+                    this.ipv6 = this.generateIPv6(network);
+                }
+
+                network.devices.push(this);
+            }
+
+            generateIPv6(network) {
+                const prefix = 'fe80::';
+                const suffix = Math.random().toString(16).substr(2, 4);
+                return `${prefix}${suffix}`;
+            }
+
+            getIcon() {
+                const icons = {
+                    server: '🖥️',
+                    client: '💻',
+                    vm: '📦',
+                    dns: '🔍',
+                    nas: '💾',
+                    bridge: '🌉',
+                    switch: '🔀',
+                    router: '📡',
+                    wifi: '📶',
+                    ssh: '🔐'
+                };
+                return icons[this.type] || '❓';
+            }
+        }
+
+        class NetworkSimulator {
+            constructor() {
+                this.devices = [];
+                this.networks = [];
+                this.connections = [];
+                this.configType = 'simple';
+                this.logs = [];
+            }
+
+            addDevice(device) {
+                this.devices.push(device);
+                this.log(`Équipement ajouté: ${device.name} (${device.type})`, 'info');
+                this.updateStats();
+            }
+
+            addNetwork(network) {
+                this.networks.push(network);
+                this.log(`Réseau créé: ${network.name} (${network.address})`, 'success');
+                this.updateStats();
+            }
+
+            removeDevice(deviceId) {
+                const device = this.devices.find(d => d.id === deviceId);
+                if (device && device.network) {
+                    device.network.devices = device.network.devices.filter(d => d.id !== deviceId);
+                }
+                this.devices = this.devices.filter(d => d.id !== deviceId);
+                this.log(`Équipement supprimé: ${device.name}`, 'warning');
+                this.updateStats();
+            }
+
+            removeNetwork(networkId) {
+                const network = this.networks.find(n => n.id === networkId);
+                // Remove devices from this network
+                this.devices.forEach(device => {
+                    if (device.network && device.network.id === networkId) {
+                        device.network = null;
+                        device.ipv4 = null;
+                        device.ipv6 = null;
+                    }
+                });
+                this.networks = this.networks.filter(n => n.id !== networkId);
+                this.log(`Réseau supprimé: ${network.name}`, 'warning');
+                this.updateStats();
+            }
+
+            testConnectivity(sourceId, destId, testType) {
+                const source = this.devices.find(d => d.id === sourceId);
+                const dest = this.devices.find(d => d.id === destId);
+
+                if (!source || !dest) {
+                    return {
+                        success: false,
+                        message: 'Source ou destination introuvable'
+                    };
+                }
+
+                // Check if both have IPs
+                if (!source.ipv4 || !dest.ipv4) {
+                    return {
+                        success: false,
+                        message: 'Équipement(s) sans adresse IP assignée',
+                        details: 'Assignez les équipements à un réseau'
+                    };
+                }
+
+                // Check if on same network or routable
+                const sameNetwork = source.network && dest.network && source.network.id === dest.network.id;
+                const hasRouter = this.devices.some(d => d.type === 'router');
+
+                if (!sameNetwork && !hasRouter) {
+                    return {
+                        success: false,
+                        message: 'Pas de route entre les réseaux',
+                        details: `${source.name} (${source.network?.name}) et ${dest.name} (${dest.network?.name}) ne sont pas sur le même réseau et aucun routeur n'est configuré`
+                    };
+                }
+
+                // Check VLAN isolation
+                if (source.vlan && dest.vlan && source.vlan !== dest.vlan) {
+                    return {
+                        success: false,
+                        message: 'VLANs différents',
+                        details: `${source.name} (VLAN ${source.vlan}) et ${dest.name} (VLAN ${dest.vlan}) sont isolés`
+                    };
+                }
+
+                // Test specific services
+                if (testType === 'dns' && dest.type !== 'dns') {
+                    return {
+                        success: false,
+                        message: 'La destination n\'est pas un serveur DNS',
+                        details: `${dest.name} ne fournit pas de service DNS`
+                    };
+                }
+
+                if (testType === 'ssh' && !dest.services.includes('ssh')) {
+                    return {
+                        success: false,
+                        message: 'Service SSH non disponible',
+                        details: `${dest.name} n'a pas de service SSH actif`
+                    };
+                }
+
+                // Success
+                return {
+                    success: true,
+                    message: 'Connectivité établie',
+                    details: `${source.name} (${source.ipv4}) → ${dest.name} (${dest.ipv4})`,
+                    path: this.calculatePath(source, dest)
+                };
+            }
+
+            calculatePath(source, dest) {
+                const path = [source.name];
+                
+                if (source.network.id !== dest.network.id) {
+                    const router = this.devices.find(d => d.type === 'router');
+                    if (router) {
+                        path.push(router.name);
+                    }
+                }
+
+                const switchInNetwork = this.devices.find(d => 
+                    d.type === 'switch' && d.network && d.network.id === dest.network.id
+                );
+                if (switchInNetwork) {
+                    path.push(switchInNetwork.name);
+                }
+
+                path.push(dest.name);
+                return path;
+            }
+
+            validate() {
+                const issues = [];
+
+                // Check for IP conflicts
+                const ipMap = new Map();
+                this.devices.forEach(device => {
+                    if (device.ipv4) {
+                        if (ipMap.has(device.ipv4)) {
+                            issues.push({
+                                type: 'error',
+                                message: `Conflit d'adresse IP: ${device.ipv4}`,
+                                details: `${ipMap.get(device.ipv4)} et ${device.name} partagent la même IP`
+                            });
+                        } else {
+                            ipMap.set(device.ipv4, device.name);
+                        }
+                    }
+                });
+
+                // Check for devices without network
+                this.devices.forEach(device => {
+                    if (!device.network && device.type !== 'router' && device.type !== 'bridge') {
+                        issues.push({
+                            type: 'warning',
+                            message: `Équipement non connecté: ${device.name}`,
+                            details: 'Cet équipement n\'est assigné à aucun réseau'
+                        });
+                    }
+                });
+
+                // Check for isolated networks
+                this.networks.forEach(network => {
+                    if (network.devices.length === 0) {
+                        issues.push({
+                            type: 'warning',
+                            message: `Réseau vide: ${network.name}`,
+                            details: 'Aucun équipement n\'est connecté à ce réseau'
+                        });
+                    }
+                });
+
+                // Check for VLAN consistency
+                const vlanMap = new Map();
+                this.devices.forEach(device => {
+                    if (device.vlan) {
+                        if (!vlanMap.has(device.vlan)) {
+                            vlanMap.set(device.vlan, []);
+                        }
+                        vlanMap.get(device.vlan).push(device.name);
+                    }
+                });
+
+                // Check if services are accessible
+                const dnsServers = this.devices.filter(d => d.type === 'dns');
+                if (dnsServers.length === 0 && this.configType === 'services') {
+                    issues.push({
+                        type: 'warning',
+                        message: 'Aucun serveur DNS configuré',
+                        details: 'Configuration de type "Services Centralisés" sans DNS'
+                    });
+                }
+
+                if (issues.length === 0) {
+                    issues.push({
+                        type: 'success',
+                        message: 'Configuration valide',
+                        details: 'Aucun problème détecté dans la configuration réseau'
+                    });
+                }
+
+                return issues;
+            }
+
+            log(message, type = 'info') {
+                this.logs.push({
+                    timestamp: new Date(),
+                    message,
+                    type
+                });
+                this.updateLogs();
+            }
+
+            updateStats() {
+                document.getElementById('statsDevices').textContent = this.devices.length;
+                document.getElementById('statsNetworks').textContent = this.networks.length;
+                
+                let connections = 0;
+                this.networks.forEach(net => {
+                    connections += net.devices.length;
+                });
+                document.getElementById('statsConnections').textContent = connections;
+
+                const issues = this.validate();
+                const hasErrors = issues.some(i => i.type === 'error');
+                const statusEl = document.getElementById('statsStatus');
+                if (hasErrors) {
+                    statusEl.textContent = 'ERROR';
+                    statusEl.className = 'stats-value text-red-400';
+                } else {
+                    statusEl.textContent = 'OK';
+                    statusEl.className = 'stats-value text-green-400';
+                }
+            }
+
+            updateLogs() {
+                const logsContainer = document.getElementById('systemLogs');
+                const lastLogs = this.logs.slice(-20).reverse();
+                
+                logsContainer.innerHTML = lastLogs.map(log => {
+                    const time = log.timestamp.toLocaleTimeString();
+                    return `<div class="log-entry ${log.type}">[${time}] ${log.message}</div>`;
+                }).join('');
+            }
+
+            autoGenerate() {
+                // Auto-generate based on config type
+                switch(this.configType) {
+                    case 'simple':
+                        this.generateSimpleNetwork();
+                        break;
+                    case 'vlan':
+                        this.generateVLANNetwork();
+                        break;
+                    case 'multi':
+                        this.generateMultiNetwork();
+                        break;
+                    case 'services':
+                        this.generateServicesNetwork();
+                        break;
+                    case 'wifi':
+                        this.generateWiFiNetwork();
+                        break;
+                }
+            }
+
+            generateSimpleNetwork() {
+                const network = new Network('LAN-Principal', '192.168.1.0/24', 'lan');
+                this.addNetwork(network);
+
+                const router = new Device('RTR-Main', 'router');
+                router.assignIP(network);
+                this.addDevice(router);
+
+                const switch1 = new Device('SW-Core', 'switch');
+                switch1.assignIP(network);
+                this.addDevice(switch1);
+
+                for (let i = 1; i <= 3; i++) {
+                    const client = new Device(`PC-${i}`, 'client');
+                    client.assignIP(network);
+                    this.addDevice(client);
+                }
+
+                this.log('Configuration simple générée automatiquement', 'success');
+            }
+
+            generateVLANNetwork() {
+                const network = new Network('LAN-Segmenté', '192.168.0.0/23', 'lan');
+                this.addNetwork(network);
+
+                const vlan10 = new Network('VLAN-Admin', '192.168.1.0/24', 'vlan', 10);
+                const vlan20 = new Network('VLAN-Users', '192.168.2.0/24', 'vlan', 20);
+                this.addNetwork(vlan10);
+                this.addNetwork(vlan20);
+
+                const router = new Device('RTR-Core', 'router');
+                router.assignIP(network);
+                this.addDevice(router);
+
+                const switch1 = new Device('SW-VLAN', 'switch');
+                switch1.assignIP(network);
+                this.addDevice(switch1);
+
+                const admin = new Device('PC-Admin', 'client');
+                admin.assignIP(vlan10);
+                admin.vlan = 10;
+                this.addDevice(admin);
+
+                for (let i = 1; i <= 2; i++) {
+                    const user = new Device(`PC-User-${i}`, 'client');
+                    user.assignIP(vlan20);
+                    user.vlan = 20;
+                    this.addDevice(user);
+                }
+
+                this.log('Configuration VLAN générée automatiquement', 'success');
+            }
+
+            generateServicesNetwork() {
+                const network = new Network('LAN-Enterprise', '10.0.0.0/24', 'lan');
+                this.addNetwork(network);
+
+                const dns = new Device('SRV-DNS', 'dns');
+                dns.assignIP(network);
+                dns.services.push('dns');
+                this.addDevice(dns);
+
+                const nas = new Device('SRV-NAS', 'nas');
+                nas.assignIP(network);
+                nas.services.push('smb', 'nfs');
+                this.addDevice(nas);
+
+                const server = new Device('SRV-Web', 'server');
+                server.assignIP(network);
+                server.services.push('http', 'ssh');
+                this.addDevice(server);
+
+                const switch1 = new Device('SW-Core', 'switch');
+                switch1.assignIP(network);
+                this.addDevice(switch1);
+
+                for (let i = 1; i <= 2; i++) {
+                    const client = new Device(`WS-${i}`, 'client');
+                    client.assignIP(network);
+                    this.addDevice(client);
+                }
+
+                this.log('Configuration services centralisés générée', 'success');
+            }
+
+            generateWiFiNetwork() {
+                const lanNetwork = new Network('LAN-Wired', '192.168.1.0/24', 'lan');
+                const wifiNetwork = new Network('WiFi-Guest', '192.168.100.0/24', 'wifi');
+                this.addNetwork(lanNetwork);
+                this.addNetwork(wifiNetwork);
+
+                const router = new Device('RTR-Main', 'router');
+                router.assignIP(lanNetwork);
+                this.addDevice(router);
+
+                const ap = new Device('AP-Guest', 'wifi');
+                ap.assignIP(wifiNetwork);
+                this.addDevice(ap);
+
+                const server = new Device('SRV-File', 'server');
+                server.assignIP(lanNetwork);
+                this.addDevice(server);
+
+                for (let i = 1; i <= 2; i++) {
+                    const laptop = new Device(`Laptop-${i}`, 'client');
+                    laptop.assignIP(wifiNetwork);
+                    this.addDevice(laptop);
+                }
+
+                this.log('Configuration WiFi isolé générée', 'success');
+            }
+        }
+
+        // ============================================
+        // GLOBAL STATE
+        // ============================================
+
+        const simulator = new NetworkSimulator();
+
+        // ============================================
+        // UI FUNCTIONS
+        // ============================================
+
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.style.display = 'none';
+            });
+
+            // Show selected tab
+            document.getElementById(`tab-${tabName}`).style.display = 'block';
+
+            // Update active button
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // Special actions for certain tabs
+            if (tabName === 'topology') {
+                renderTopology();
+            } else if (tabName === 'simulation') {
+                updateSimulationSelects();
+            }
+        }
+
+        function onConfigTypeChange() {
+            const configType = document.getElementById('configType').value;
+            simulator.configType = configType;
+
+            const descriptions = {
+                simple: 'Réseau plat sans segmentation. Tous les équipements sur le même réseau.',
+                vlan: 'Réseau segmenté avec VLANs pour isoler les groupes d\'équipements.',
+                multi: 'Plusieurs sous-réseaux interconnectés via routeurs.',
+                services: 'Architecture avec services centralisés (DNS, NAS, etc.).',
+                wifi: 'Réseau avec zone WiFi isolée du réseau filaire principal.'
+            };
+
+            document.getElementById('configDescription').textContent = descriptions[configType];
+            
+            // Auto-generate if no devices
+            if (simulator.devices.length === 0) {
+                if (confirm('Voulez-vous générer automatiquement une configuration de démonstration ?')) {
+                    simulator.autoGenerate();
+                    renderDevicesList();
+                    renderNetworksList();
+                }
+            }
+        }
+
+        function onNetworkTypeChange() {
+            const networkType = document.getElementById('networkType').value;
+            const vlanField = document.getElementById('vlanIdField');
+            
+            if (networkType === 'vlan') {
+                vlanField.style.display = 'block';
+            } else {
+                vlanField.style.display = 'none';
+            }
+        }
+
+        function addDevice() {
+            const type = document.getElementById('deviceType').value;
+            const name = document.getElementById('deviceName').value.trim();
+
+            if (!name) {
+                alert('Veuillez entrer un nom pour l\'équipement');
+                return;
+            }
+
+            const device = new Device(name, type);
+            
+            // Auto-assign to first available network if exists
+            if (simulator.networks.length > 0) {
+                device.assignIP(simulator.networks[0]);
+            }
+
+            simulator.addDevice(device);
+            renderDevicesList();
+
+            // Clear input
+            document.getElementById('deviceName').value = '';
+        }
+
+        function addNetwork() {
+            const type = document.getElementById('networkType').value;
+            const name = document.getElementById('networkName').value.trim();
+            const address = document.getElementById('networkAddress').value.trim();
+            const vlanId = type === 'vlan' ? document.getElementById('vlanId').value : null;
+
+            if (!name || !address) {
+                alert('Veuillez remplir tous les champs');
+                return;
+            }
+
+            // Validate CIDR format
+            if (!/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\/\d{1,2}$/.test(address)) {
+                alert('Format CIDR invalide. Exemple: 192.168.1.0/24');
+                return;
+            }
+
+            const network = new Network(name, address, type, vlanId);
+            simulator.addNetwork(network);
+            renderNetworksList();
+
+            // Clear inputs
+            document.getElementById('networkName').value = '';
+            document.getElementById('networkAddress').value = '';
+            if (vlanId) document.getElementById('vlanId').value = '';
+        }
+
+        function renderDevicesList() {
+            const container = document.getElementById('devicesList');
+            document.getElementById('deviceCount').textContent = `${simulator.devices.length} équipement(s)`;
+
+            if (simulator.devices.length === 0) {
+                container.innerHTML = '<div class="text-center text-gray-500 py-8">Aucun équipement configuré</div>';
+                return;
+            }
+
+            container.innerHTML = simulator.devices.map(device => `
+                <div class="device-card p-4 rounded-lg cursor-pointer" onclick="showDeviceDetails('${device.id}')">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="text-2xl">${device.getIcon()}</div>
+                            <div>
+                                <div class="font-bold text-cyan-400">${device.name}</div>
+                                <div class="text-xs text-gray-400">${device.type.toUpperCase()}</div>
+                            </div>
+                        </div>
+                        <div class="text-right text-sm">
+                            ${device.ipv4 ? `<div class="text-cyan-400">${device.ipv4}</div>` : '<div class="text-gray-500">No IP</div>'}
+                            ${device.network ? `<div class="text-xs text-gray-400">${device.network.name}</div>` : ''}
+                        </div>
+                    </div>
+                    <div class="mt-2 flex items-center justify-between">
+                        <div class="flex gap-2">
+                            ${device.vlan ? `<span class="badge badge-info">VLAN ${device.vlan}</span>` : ''}
+                            ${device.services.length > 0 ? `<span class="badge badge-success">${device.services.length} service(s)</span>` : ''}
+                        </div>
+                        <button onclick="event.stopPropagation(); deleteDevice('${device.id}')" class="text-red-400 hover:text-red-300 text-sm">✕</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderNetworksList() {
+            const container = document.getElementById('networksList');
+            document.getElementById('networkCount').textContent = `${simulator.networks.length} réseau(x)`;
+
+            if (simulator.networks.length === 0) {
+                container.innerHTML = '<div class="text-center text-gray-500 py-8">Aucun réseau configuré</div>';
+                return;
+            }
+
+            container.innerHTML = simulator.networks.map(network => `
+                <div class="device-card p-4 rounded-lg">
+                    <div class="flex items-center justify-between mb-2">
+                        <div>
+                            <div class="font-bold text-cyan-400">${network.name}</div>
+                            <div class="text-xs text-gray-400">${network.type.toUpperCase()}</div>
+                        </div>
+                        <button onclick="deleteNetwork('${network.id}')" class="text-red-400 hover:text-red-300">✕</button>
+                    </div>
+                    <div class="text-sm space-y-1">
+                        <div><span class="text-gray-400">Adresse:</span> <span class="text-cyan-400">${network.address}</span></div>
+                        <div><span class="text-gray-400">Masque:</span> ${network.netmask}</div>
+                        ${network.vlanId ? `<div><span class="text-gray-400">VLAN ID:</span> ${network.vlanId}</div>` : ''}
+                        <div><span class="text-gray-400">Équipements:</span> ${network.devices.length}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function deleteDevice(deviceId) {
+            if (confirm('Confirmer la suppression de cet équipement ?')) {
+                simulator.removeDevice(parseFloat(deviceId));
+                renderDevicesList();
+                renderTopology();
+            }
+        }
+
+        function deleteNetwork(networkId) {
+            if (confirm('Confirmer la suppression de ce réseau ? Les équipements connectés perdront leur IP.')) {
+                simulator.removeNetwork(parseFloat(networkId));
+                renderNetworksList();
+                renderDevicesList();
+                renderTopology();
+            }
+        }
+
+        function showDeviceDetails(deviceId) {
+            const device = simulator.devices.find(d => d.id == deviceId);
+            if (!device) return;
+
+            const content = `
+                <div class="space-y-4">
+                    <div class="flex items-center space-x-4 pb-4 border-b border-gray-700">
+                        <div class="text-4xl">${device.getIcon()}</div>
+                        <div>
+                            <h3 class="text-xl font-bold">${device.name}</h3>
+                            <p class="text-sm text-gray-400">${device.type.toUpperCase()}</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">Réseau assigné</label>
+                            <select class="input-field" onchange="assignDeviceToNetwork('${device.id}', this.value)">
+                                <option value="">-- Aucun réseau --</option>
+                                ${simulator.networks.map(net => `
+                                    <option value="${net.id}" ${device.network && device.network.id === net.id ? 'selected' : ''}>
+                                        ${net.name} (${net.address})
+                                    </option>
+                                `).join('')}
+                            </select>
+                        </div>
+
+                        ${device.ipv4 ? `
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-2">Adresse IPv4</label>
+                                <div class="input-field bg-gray-900">${device.ipv4}</div>
+                            </div>
+                        ` : ''}
+
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">Protocole IP</label>
+                            <select class="input-field" onchange="updateDeviceProtocol('${device.id}', this.value)">
+                                <option value="ipv4" ${device.protocol === 'ipv4' ? 'selected' : ''}>IPv4 uniquement</option>
+                                <option value="ipv6" ${device.protocol === 'ipv6' ? 'selected' : ''}>IPv6 uniquement</option>
+                                <option value="dual" ${device.protocol === 'dual' ? 'selected' : ''}>Dual Stack (IPv4 + IPv6)</option>
+                            </select>
+                        </div>
+
+                        ${device.protocol !== 'ipv4' && device.ipv6 ? `
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-2">Adresse IPv6</label>
+                                <div class="input-field bg-gray-900">${device.ipv6}</div>
+                            </div>
+                        ` : ''}
+
+                        ${device.type !== 'client' ? `
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-2">Services actifs</label>
+                                <div class="space-y-2">
+                                    ${['http', 'https', 'ssh', 'dns', 'dhcp', 'smb', 'nfs'].map(service => `
+                                        <label class="flex items-center space-x-2 cursor-pointer">
+                                            <input type="checkbox" 
+                                                ${device.services.includes(service) ? 'checked' : ''} 
+                                                onchange="toggleDeviceService('${device.id}', '${service}', this.checked)"
+                                                class="w-4 h-4">
+                                            <span class="text-sm">${service.toUpperCase()}</span>
+                                        </label>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('deviceModalContent').innerHTML = content;
+            document.getElementById('deviceModal').classList.add('active');
+        }
+
+        function closeDeviceModal() {
+            document.getElementById('deviceModal').classList.remove('active');
+        }
+
+        function assignDeviceToNetwork(deviceId, networkId) {
+            const device = simulator.devices.find(d => d.id == deviceId);
+            const network = simulator.networks.find(n => n.id == networkId);
+
+            if (!device) return;
+
+            // Remove from old network
+            if (device.network) {
+                device.network.devices = device.network.devices.filter(d => d.id !== device.id);
+            }
+
+            if (network) {
+                device.assignIP(network);
+            } else {
+                device.network = null;
+                device.ipv4 = null;
+                device.ipv6 = null;
+            }
+
+            simulator.log(`${device.name} ${network ? 'assigné à ' + network.name : 'déconnecté du réseau'}`, 'info');
+            renderDevicesList();
+            renderNetworksList();
+            showDeviceDetails(deviceId);
+        }
+
+        function updateDeviceProtocol(deviceId, protocol) {
+            const device = simulator.devices.find(d => d.id == deviceId);
+            if (!device) return;
+
+            device.protocol = protocol;
+
+            if ((protocol === 'ipv6' || protocol === 'dual') && device.network) {
+                device.ipv6 = device.generateIPv6(device.network);
+            } else if (protocol === 'ipv4') {
+                device.ipv6 = null;
+            }
+
+            simulator.log(`${device.name} - Protocole changé: ${protocol}`, 'info');
+            showDeviceDetails(deviceId);
+        }
+
+        function toggleDeviceService(deviceId, service, enabled) {
+            const device = simulator.devices.find(d => d.id == deviceId);
+            if (!device) return;
+
+            if (enabled) {
+                if (!device.services.includes(service)) {
+                    device.services.push(service);
+                }
+            } else {
+                device.services = device.services.filter(s => s !== service);
+            }
+
+            simulator.log(`${device.name} - Service ${service}: ${enabled ? 'activé' : 'désactivé'}`, 'info');
+            renderDevicesList();
+        }
+
+        function renderTopology() {
+            const canvas = document.getElementById('topologyCanvas');
+            canvas.innerHTML = '';
+
+            if (simulator.devices.length === 0) {
+                canvas.innerHTML = '<div class="text-center text-gray-500 py-20">Aucun équipement à afficher</div>';
+                return;
+            }
+
+            const width = canvas.offsetWidth;
+            const height = 500;
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const radius = Math.min(width, height) / 3;
+
+            // Group devices by network
+            const networkGroups = new Map();
+            simulator.devices.forEach(device => {
+                const netId = device.network ? device.network.id : 'unassigned';
+                if (!networkGroups.has(netId)) {
+                    networkGroups.set(netId, []);
+                }
+                networkGroups.get(netId).push(device);
+            });
+
+            // Position devices in clusters
+            let groupIndex = 0;
+            const positions = new Map();
+
+            networkGroups.forEach((devices, netId) => {
+                const groupAngle = (groupIndex / networkGroups.size) * 2 * Math.PI;
+                const groupCenterX = centerX + Math.cos(groupAngle) * radius;
+                const groupCenterY = centerY + Math.sin(groupAngle) * radius;
+
+                devices.forEach((device, i) => {
+                    const angle = (i / devices.length) * 2 * Math.PI;
+                    const x = groupCenterX + Math.cos(angle) * 80;
+                    const y = groupCenterY + Math.sin(angle) * 80;
+                    positions.set(device.id, { x, y });
+                });
+
+                groupIndex++;
+            });
+
+            // Draw connections
+            simulator.devices.forEach(device => {
+                if (device.network) {
+                    const devicesInSameNet = device.network.devices.filter(d => d.id !== device.id);
+                    devicesInSameNet.forEach(otherDevice => {
+                        const pos1 = positions.get(device.id);
+                        const pos2 = positions.get(otherDevice.id);
+                        if (pos1 && pos2) {
+                            const dx = pos2.x - pos1.x;
+                            const dy = pos2.y - pos1.y;
+                            const length = Math.sqrt(dx * dx + dy * dy);
+                            const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+                            const link = document.createElement('div');
+                            link.className = 'network-link';
+                            link.style.left = pos1.x + 'px';
+                            link.style.top = pos1.y + 40 + 'px';
+                            link.style.width = length + 'px';
+                            link.style.transform = `rotate(${angle}deg)`;
+                            canvas.appendChild(link);
+                        }
+                    });
+                }
+            });
+
+            // Draw nodes
+            simulator.devices.forEach(device => {
+                const pos = positions.get(device.id);
+                if (!pos) return;
+
+                const node = document.createElement('div');
+                node.className = 'network-node';
+                node.style.left = (pos.x - 40) + 'px';
+                node.style.top = (pos.y - 40) + 'px';
+                node.innerHTML = `
+                    <div class="text-2xl">${device.getIcon()}</div>
+                    <div class="text-xs mt-1 text-center">${device.name}</div>
+                `;
+                node.onclick = () => showTopologyDetails(device);
+                canvas.appendChild(node);
+            });
+        }
+
+        function showTopologyDetails(device) {
+            const details = document.getElementById('topologyDetails');
+            details.innerHTML = `
+                <div class="space-y-3">
+                    <div class="flex items-center space-x-3 pb-3 border-b border-gray-700">
+                        <div class="text-3xl">${device.getIcon()}</div>
+                        <div>
+                            <div class="font-bold text-lg">${device.name}</div>
+                            <div class="text-xs text-gray-400">${device.type.toUpperCase()}</div>
+                        </div>
+                    </div>
+                    
+                    ${device.ipv4 ? `
+                        <div>
+                            <div class="text-xs text-gray-400">IPv4</div>
+                            <div class="font-mono text-cyan-400">${device.ipv4}</div>
+                        </div>
+                    ` : ''}
+                    
+                    ${device.network ? `
+                        <div>
+                            <div class="text-xs text-gray-400">Réseau</div>
+                            <div class="font-mono">${device.network.name}</div>
+                            <div class="text-xs text-gray-500">${device.network.address}</div>
+                        </div>
+                    ` : '<div class="text-yellow-400 text-sm">⚠️ Non connecté</div>'}
+                    
+                    ${device.vlan ? `
+                        <div>
+                            <div class="text-xs text-gray-400">VLAN</div>
+                            <div class="badge badge-info">${device.vlan}</div>
+                        </div>
+                    ` : ''}
+                    
+                    ${device.services.length > 0 ? `
+                        <div>
+                            <div class="text-xs text-gray-400 mb-2">Services actifs</div>
+                            <div class="flex flex-wrap gap-1">
+                                ${device.services.map(s => `<span class="badge badge-success">${s}</span>`).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    <button onclick="showDeviceDetails('${device.id}')" class="btn-secondary w-full text-sm mt-4">
+                        Configurer
+                    </button>
+                </div>
+            `;
+        }
+
+        function regenerateTopology() {
+            renderTopology();
+            simulator.log('Topologie régénérée', 'info');
+        }
+
+        function updateSimulationSelects() {
+            const sourceSelect = document.getElementById('simSource');
+            const destSelect = document.getElementById('simDestination');
+
+            const options = simulator.devices.map(d => 
+                `<option value="${d.id}">${d.name} (${d.ipv4 || 'No IP'})</option>`
+            ).join('');
+
+            sourceSelect.innerHTML = '<option value="">-- Sélectionner source --</option>' + options;
+            destSelect.innerHTML = '<option value="">-- Sélectionner destination --</option>' + options;
+        }
+
+        function runSimulation() {
+            const sourceId = parseFloat(document.getElementById('simSource').value);
+            const destId = parseFloat(document.getElementById('simDestination').value);
+            const testType = document.getElementById('simType').value;
+
+            if (!sourceId || !destId) {
+                alert('Veuillez sélectionner source et destination');
+                return;
+            }
+
+            const result = simulator.testConnectivity(sourceId, destId, testType);
+            
+            const resultDiv = document.getElementById('simResult');
+            const historyDiv = document.getElementById('simHistory');
+
+            const source = simulator.devices.find(d => d.id === sourceId);
+            const dest = simulator.devices.find(d => d.id === destId);
+
+            const resultHTML = `
+                <div class="cyber-border p-4 rounded-lg ${result.success ? 'border-green-400' : 'border-red-400'}">
+                    <div class="flex items-center space-x-2 mb-2">
+                        <div class="text-2xl">${result.success ? '✓' : '✗'}</div>
+                        <div class="font-bold ${result.success ? 'text-green-400' : 'text-red-400'}">
+                            ${result.message}
+                        </div>
+                    </div>
+                    <div class="text-sm text-gray-400">${result.details}</div>
+                    ${result.path ? `
+                        <div class="mt-3 p-3 bg-gray-900 rounded">
+                            <div class="text-xs text-gray-400 mb-1">Chemin:</div>
+                            <div class="font-mono text-cyan-400 text-sm">${result.path.join(' → ')}</div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+
+            resultDiv.innerHTML = resultHTML;
+
+            // Add to history
+            const historyEntry = `
+                <div class="log-entry ${result.success ? 'success' : 'error'}">
+                    [${new Date().toLocaleTimeString()}] ${testType.toUpperCase()}: ${source.name} → ${dest.name} - ${result.success ? 'SUCCESS' : 'FAILED'}
+                </div>
+            `;
+
+            if (historyDiv.innerHTML.includes('Aucune simulation')) {
+                historyDiv.innerHTML = historyEntry;
+            } else {
+                historyDiv.insertAdjacentHTML('afterbegin', historyEntry);
+            }
+
+            simulator.log(`Test ${testType}: ${source.name} → ${dest.name} - ${result.success ? 'Succès' : 'Échec'}`, result.success ? 'success' : 'error');
+        }
+
+        function validateConfiguration() {
+            const issues = simulator.validate();
+            const resultsDiv = document.getElementById('validationResults');
+
+            resultsDiv.innerHTML = `
+                <div class="space-y-3">
+                    ${issues.map(issue => `
+                        <div class="cyber-border p-4 rounded-lg border-${
+                            issue.type === 'success' ? 'green' :
+                            issue.type === 'error' ? 'red' :
+                            issue.type === 'warning' ? 'yellow' : 'cyan'
+                        }-400">
+                            <div class="flex items-start space-x-3">
+                                <div class="text-2xl">
+                                    ${issue.type === 'success' ? '✓' : 
+                                      issue.type === 'error' ? '✗' : 
+                                      issue.type === 'warning' ? '⚠️' : 'ℹ️'}
+                                </div>
+                                <div class="flex-1">
+                                    <div class="font-bold text-${
+                                        issue.type === 'success' ? 'green' :
+                                        issue.type === 'error' ? 'red' :
+                                        issue.type === 'warning' ? 'yellow' : 'cyan'
+                                    }-400">${issue.message}</div>
+                                    <div class="text-sm text-gray-400 mt-1">${issue.details}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+
+            simulator.log('Validation de configuration effectuée', 'info');
+        }
+
+        function exportConfig() {
+            const config = {
+                devices: simulator.devices.map(d => ({
+                    name: d.name,
+                    type: d.type,
+                    ipv4: d.ipv4,
+                    ipv6: d.ipv6,
+                    network: d.network ? d.network.name : null,
+                    services: d.services,
+                    vlan: d.vlan
+                })),
+                networks: simulator.networks.map(n => ({
+                    name: n.name,
+                    address: n.address,
+                    type: n.type,
+                    vlanId: n.vlanId
+                })),
+                configType: simulator.configType
+            };
+
+            const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `network-config-${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+
+            simulator.log('Configuration exportée', 'success');
+        }
+
+        function resetAll() {
+            if (confirm('Êtes-vous sûr de vouloir réinitialiser toute la configuration ?')) {
+                simulator.devices = [];
+                simulator.networks = [];
+                simulator.connections = [];
+                
+                renderDevicesList();
+                renderNetworksList();
+                renderTopology();
+                
+                document.getElementById('validationResults').innerHTML = '';
+                document.getElementById('simHistory').innerHTML = '<div class="text-center text-gray-500 py-8">Aucune simulation lancée</div>';
+                document.getElementById('simResult').innerHTML = '';
+                
+                simulator.log('Configuration réinitialisée', 'warning');
+                simulator.updateStats();
+            }
+        }
+
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set default config description
+            onConfigTypeChange();
+            
+            // Initialize with demo data
+            simulator.log('NetSim Pro initialisé', 'success');
+            simulator.log('Prêt pour la configuration réseau', 'info');
+        });
+
+        // Close modal on click outside
+        document.getElementById('deviceModal').addEventListener('click', (e) => {
+            if (e.target.id === 'deviceModal') {
+                closeDeviceModal();
+            }
+        });
+    </script>
+</body>
+</html>
